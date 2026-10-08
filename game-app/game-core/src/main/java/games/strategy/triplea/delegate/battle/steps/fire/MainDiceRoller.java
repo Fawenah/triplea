@@ -17,6 +17,48 @@ public class MainDiceRoller
 
   @Override
   public DiceRoll apply(final IDelegateBridge bridge, final RollDiceStep step) {
+    final var state = step.getBattleState();
+    final var firing = step.getFiringGroup().getFiringUnits();
+    final var targets = step.getFiringGroup().getTargetUnits();
+    if (Properties.getModEcrRules(state.getGameData().getProperties())
+        && state.getBattleSite().isWater()
+        && step.getSide() == games.strategy.triplea.delegate.battle.BattleState.Side.OFFENSE
+        && !firing.isEmpty()
+        && !targets.isEmpty()
+        && firing.stream()
+            .allMatch(games.strategy.triplea.delegate.battle.ModEcrCombatRules::isStrategicBomber)
+        && state.filterUnits(ACTIVE, step.getSide()).stream()
+            .allMatch(games.strategy.triplea.delegate.battle.ModEcrCombatRules::isStrategicBomber)
+        && targets.stream()
+            .allMatch(games.strategy.triplea.delegate.Matches.unitIsSeaTransport())) {
+      final var player = state.getPlayer(step.getSide());
+      final var annotation =
+          DiceRoll.getAnnotation(
+              firing, player, state.getBattleSite(), state.getStatus().getRound());
+      final var rolls =
+          bridge.getRandom(
+              state.getGameData().getDiceSides(),
+              firing.size(),
+              player,
+              games.strategy.engine.random.IRandomStats.DiceType.COMBAT,
+              annotation);
+      final java.util.List<games.strategy.triplea.delegate.Die> dice = new java.util.ArrayList<>();
+      int hits = 0;
+      for (final int roll : rolls) {
+        final boolean hit = roll < 7;
+        hits += hit ? 1 : 0;
+        dice.add(
+            new games.strategy.triplea.delegate.Die(
+                roll,
+                7,
+                hit
+                    ? games.strategy.triplea.delegate.Die.DieType.HIT
+                    : games.strategy.triplea.delegate.Die.DieType.MISS));
+      }
+      final var result = new DiceRoll(dice, hits, firing.size() * 0.7, player.getName());
+      bridge.getHistoryWriter().addChildToEvent(annotation, result);
+      return result;
+    }
     return RollDiceFactory.rollBattleDice(
         step.getFiringGroup().getFiringUnits(),
         step.getBattleState().getPlayer(step.getSide()),

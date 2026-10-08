@@ -64,6 +64,19 @@ public class RemoveUnprotectedUnits implements BattleStep {
     if (attackerHasRetreat(side)) {
       return;
     }
+    if (Properties.getModEcrRules(battleState.getGameData().getProperties())
+        && battleState.getBattleSite().isWater()) {
+      final var allies = getAlliedUnits(battleState.getPlayer(side));
+      final var enemies = getEnemyUnitsThatCanFire(battleState.getPlayer(side));
+      if (!allies.isEmpty()
+          && allies.stream().allMatch(Matches.unitIsSeaTransport())
+          && !enemies.isEmpty()
+          && enemies.stream()
+              .allMatch(
+                  games.strategy.triplea.delegate.battle.ModEcrCombatRules::isStrategicBomber)) {
+        return;
+      }
+    }
     checkUndefendedTransports(bridge, side);
     checkUnprotectedUnits(bridge, side);
   }

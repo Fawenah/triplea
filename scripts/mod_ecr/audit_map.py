@@ -53,6 +53,12 @@ def main():
         if folder.is_dir():
             for unit in types:
                 require((folder / (unit + ".png")).exists(), f"Missing image: {folder.name}/{unit}")
+            for unit, filename in (("naval_mine", "NavalMine.png"), ("recon_plane", "reconnaissancePlane.png")):
+                supplied = ROOT / "local_rule_docs" / filename
+                if supplied.exists():
+                    installed = folder / (unit + ".png")
+                    require(installed.exists() and installed.read_bytes() == supplied.read_bytes(),
+                            f"Supplied artwork not installed: {folder.name}/{unit}")
     for unit in ("bomber", "heavy_bomber", "tactical_bomber"):
         a = root.find(f"attachmentList/attachment[@attachTo='{unit}'][@name='unitAttachment']")
         require(a.find("option[@name='bombingMaxDieSides']").get("value") == "6",

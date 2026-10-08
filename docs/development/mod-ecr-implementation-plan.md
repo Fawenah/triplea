@@ -318,6 +318,24 @@ movement stats.
 
 ### Stage 4 — Advanced combat and naval rules
 
+First combat increment: anti-tank priority and normal overflow, first-round-only
+mechanized anti-tank priority, attacking strategic bomber withdrawal and actual
+one-d10-per-bomber transport attacks are automated. Transport/cargo reversion at
+Noncombat Move end is also automated; forward conversion still uses Edit mode.
+The user confirmed that withdrawn defending bombers are destroyed on territory
+capture. Defending bombers now withdraw after round one, cannot fire or be chosen
+as later combat casualties, and are destroyed when enemy ground units capture
+their territory. They survive when the territory is held or an air-only attack
+wins without capture.
+Fighter interception and tactical target selection remain the next combat work.
+
+The supplied NavalMine.png and reconnaissancePlane.png are copied unchanged to
+each owner sprite directory and preserved by map regeneration. Ownership remains
+in unit data; no recolouring is required. The external expansion reference's
+naval mine notes specify manual Edit-mode placement/removal, with nation/colour/
+border markers. It provides useful presentation ideas but no automated ECR
+entry-roll mechanism. Its files and rules were not modified or adopted.
+
 Separate changes in increasing interaction complexity:
 
 1. Strategic bombers fight and can be casualties only in round one, then leave
@@ -465,7 +483,7 @@ serialized fields/packages or remote API signatures were changed.
 
 Validation: `:game-core:check`, `:game-headed:check` and
 `:game-headed:installDist` passed with JDK 25.
-All 2,571 game-core tests passed, including 59 MOD ECR integration cases;
+All 2,589 game-core tests passed, including 77 MOD ECR integration cases;
 78 desktop tests passed. Formatting and
 PMD passed. The independent Python map audit passed. The supplied YG baseline
 was preserved. The user played a German turn on the first-pass version;
@@ -482,7 +500,12 @@ Launch the built Windows client with `scripts/mod_ecr/run.ps1` and select the
 new map after configuring `custom_maps` as the maps folder. A copyable map ZIP
 is generated under `build/distributions/`.
 
-Next priorities are the combat/aircraft rules still handled manually, followed
+The first combat increment now automates anti-tank assignment, attacking bomber
+withdrawal and transport rolls, and end-of-noncombat aircraft reversion. Defender
+bomber withdrawal and destruction on ground capture are also implemented under
+the user's confirmed ruling.
+Next priorities are fighter interception, tactical targeting and the remaining
+combat/aircraft rules still handled manually, followed
 by capital-ship bounties, mines/naval screening and finally research. Use
 the first playtest to review the documented YG setup/diplomacy/placement choices
 and provisional unit art before adding those more invasive features.

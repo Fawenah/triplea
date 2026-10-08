@@ -19,6 +19,12 @@ rule documents are untouched. Research is the last priority.
 | Railroads | Fresh infantry starting Noncombat Move at an allied major factory receive two-space movement; each origin's allowance is its IPC value; split moves and undo retain the origin quota; truck and air/sea passengers do not spend railroad allowances |
 | Improved transports | At most three ground units, at most two non-infantry, within the existing weighted capacity; already loaded/unloaded cargo counts |
 | Land stacking | 10 + territory IPC per side, allied units combined; exempts AAA including radar AAA, trucks, factories/bases, and attacking aircraft; sea zones unlimited; checks movement, placement, land retreats, and aircraft landing capacity; excess stacks block phase completion |
+| Anti-tank fire | Separate specialist rolls on both sides; hits must take tanks/heavy tanks, mech infantry or mech AT first, with normal overflow; mechanized AT priority lasts only through round one |
+| Attacking strategic bombers | Survivors withdraw after round-one casualties if defenders remain; they cannot fire or be selected as casualties in later rounds; surviving aircraft still require normal landing |
+| Defending strategic bombers | Survivors withdraw from ongoing combat after round one and cannot fire or absorb later combat hits; destroyed when enemy ground units capture their territory; survive if the territory is held or an air-only attack wins without capture |
+| Bomber-only transport attacks | Undefended transports are not auto-killed; roll one d10 per bomber (including heavy), scoring a hit on 7 or less; missed transports survive the one-round attack |
+| Aircraft reversion | Owned transport/cargo planes automatically return to bomber/heavy-bomber types at the end of Noncombat Move; ownership, movement, damage and dependent links are preserved |
+| Custom artwork | Supplied NavalMine.png and reconnaissancePlane.png replace placeholders for every owner; identical artwork is shared, with ownership retained in engine unit data |
 | Transport aircraft | Noncombat airlift of two infantry, no research needed; no direct purchase; free bomber replacement still performed manually |
 | Cargo aircraft | Noncombat airlift of one transportable ground unit; infantry-only transports reject other cargo; free heavy-bomber replacement still manual |
 | Factory production | Optional engine rule caps output at territory IPC and reduces that cap for bombing damage |
@@ -66,13 +72,11 @@ rule documents are untouched. Research is the last priority.
 
 | Rule | Current limitation / agreed target |
 | --- | --- |
-| Reclassification | Use Edit mode before/during movement to replace the qualifying bomber, free; transport/cargo aircraft must return to bombers at the end of Noncombat Move; automation is deferred |
+| Reclassification | Use Edit mode before/during movement to replace the qualifying bomber for free; the reverse conversion at Noncombat Move end is automated; a direct conversion interface is deferred |
 | Research | No automatic progression or discoveries; public information is allowed, all research dice d6, UK economies do not share discoveries |
 | Upgrade acquisition | Use manual replacement variants until research is implemented; no automatic conversion of existing forces or upgrade purchase frontier |
-| Strategic bomber limits | Existing normal battle duration and undefended-transport handling remain; manually enforce first-round-only fighting and rolls against transports |
 | Paratrooper details | Base airlift support works, but required friendly ground-unit ratios, full cargo casualty handling, and onward-flight restrictions need further work |
 | Fighter interception | Raid escorts/interceptors work; the extra shot in ordinary battles is deferred; the user requires both sides' AA shots to fire simultaneously |
-| Anti-tank | Correct normal values; required casualty priority and mechanized first-round restriction are deferred |
 | Tactical targeted attack | Normal attack 5; per-bomber category selection at fixed 4 is deferred; submarines must still require a destroyer |
 | Stacking overflow | Resolve excess by moving units out; if removal is necessary, select and remove them in Edit mode. No automatic deletion. Germany alone starts over the limit: 17 counted units versus 15; its starting forces are preserved |
 | Capital-ship bounty | Manually pay 1 IPC at end turn to the participating player first in turn order |
@@ -93,10 +97,21 @@ airlift cargo, landing reservations, placement, and preserving starting excess.
 Existing movement, transport, and production regression tests also passed.
 
 The complete game-core and game-headed checks (including formatting and PMD)
-and desktop distribution build passed: 2,571 game-core tests, including 59
+and desktop distribution build passed: 2,589 game-core tests, including 77
 MOD ECR integration cases, and 78 desktop tests, with zero failures.
 AI regression coverage includes movement previews during Politics/Purchase,
 combat aircraft exemptions during Politics, and German attack/defense option
 enumeration during Politics.
+Combat follow-up coverage includes anti-tank priority/overflow and round limits,
+separate specialist fire, bomber withdrawal, full bomber-versus-transport hit/miss
+battles, one-roll heavy bombers against transports, and aircraft reversion/state.
+Defending-bomber tests cover destruction on ground capture, survival when held
+or attacked only by aircraft, heavy bombers, and no fire/casualty exposure in round two.
 An interactive tabletop playtest remains useful for the deferred rules and
 provisional map artwork.
+
+The supplied global_40_expansion_uhd_boxes map was inspected as a mine reference.
+Its notes explicitly use Edit mode for naval mine placement/removal and manual
+handling; it supplies nation/colour/border markers rather than an automated ECR
+entry-roll implementation. ECR's destroyer caps, one roll per movement phase,
+and removal on successful hits take precedence. No files in that map were changed.

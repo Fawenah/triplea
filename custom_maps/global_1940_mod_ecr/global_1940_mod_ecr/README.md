@@ -27,6 +27,9 @@ the map elsewhere. The script builds the desktop distribution if it is absent.
 Use `unit-spec.json` as the agreed roster reference. Conversion/upgrade-only
 entries record the value of the originating unit; they are not direct purchases.
 Provisional art is reused from the supplied map and some icons are shared.
+The supplied NavalMine.png and reconnaissancePlane.png are installed for every
+owner. These shared icons replace the placeholders; ownership remains available
+in the game's unit information. Map regeneration preserves the supplied artwork.
 
 The in-game notes describe manual aircraft reclassification and deferred rules.
 Read [RULE_STATUS.md](RULE_STATUS.md) before a rules-sensitive game.

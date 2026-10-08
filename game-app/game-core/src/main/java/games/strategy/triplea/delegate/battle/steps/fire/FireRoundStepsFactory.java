@@ -35,7 +35,13 @@ public class FireRoundStepsFactory {
   public List<BattleStep> createSteps() {
     return firingGroupSplitter.apply(battleState).stream()
         .sorted(
-            Comparator.comparing(FiringGroup::getDisplayName)
+            Comparator.comparingInt(
+                    (FiringGroup group) ->
+                        games.strategy.triplea.delegate.battle.ModEcrCombatRules
+                                .isAntiTankFiringGroup(battleState, group)
+                            ? 0
+                            : 1)
+                .thenComparing(FiringGroup::getDisplayName)
                 .thenComparing(FiringGroup::isSuicideOnHit))
         .map(
             firingGroup -> {

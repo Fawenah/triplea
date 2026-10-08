@@ -455,11 +455,19 @@ def configure_victory(root, china):
 
 
 def copy_assets(spec):
+    custom_images = {
+        "naval_mine": ROOT / "local_rule_docs/NavalMine.png",
+        "recon_plane": ROOT / "local_rule_docs/reconnaissancePlane.png",
+    }
     for folder in (DEST / "map/units").iterdir():
         if not folder.is_dir():
             continue
         for unit, stats in spec.items():
             image = folder / (unit + ".png")
+            custom_image = custom_images.get(unit)
+            if custom_image and custom_image.exists():
+                shutil.copy2(custom_image, image)
+                continue
             if image.exists():
                 continue
             preferred = folder / (stats.get("image", stats.get("base", unit)) + ".png")

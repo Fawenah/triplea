@@ -1050,4 +1050,57 @@ class ModEcrMapTest {
     assertThat(manager.getDefendOptions().getTerritoryMap()).isNotEmpty();
     assertThat(data.getSequence().getStep().getName()).isEqualTo("germansPolitics");
   }
+
+  @Test
+  @DisplayName("Free transport/cargo reclassifications revert automatically at noncombat end")
+  void aircraftReversionAtPhaseEnd() {
+    final var territory = emptyTerritory("Germany");
+    final var transport =
+        data.getUnitTypeList().getUnitTypeOrThrow("transport_plane").create(germans);
+    final var cargo = data.getUnitTypeList().getUnitTypeOrThrow("cargo_plane").create(germans);
+    territory.getUnitCollection().addAll(List.of(transport, cargo));
+    final var delegate = startNoncombat();
+    delegate.end();
+    assertThat(territory.getUnits())
+        .extracting(unit -> unit.getType().getName())
+        .containsExactlyInAnyOrder("bomber", "heavy_bomber");
+    assertThat(territory.getUnits())
+        .allSatisfy(unit -> assertThat(unit.getOwner()).isEqualTo(germans));
+  }
+
+  @Test
+  @DisplayName(
+      "Aircraft reversion preserves movement and cargo links and only changes the active owner")
+  void aircraftReversionState() {
+    final var territory = emptyTerritory("Germany");
+    final var transport =
+        data.getUnitTypeList().getUnitTypeOrThrow("transport_plane").create(germans);
+    final var allied =
+        data.getUnitTypeList()
+            .getUnitTypeOrThrow("cargo_plane")
+            .create(data.getPlayerList().getPlayerId("Italians"));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(germans);
+    transport.setAlreadyMoved(new BigDecimal("3"));
+    infantry.setTransportedBy(transport);
+    territory.getUnitCollection().addAll(List.of(transport, allied, infantry));
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    bridge.addChange(
+        games.strategy.engine.data.changefactory.ChangeFactory.unitPropertyChange(
+            transport, 1, Unit.PropertyName.BONUS_MOVEMENT));
+    ModEcrAircraftRules.revertAircraft(bridge, germans);
+    final var bomber =
+        territory.getUnits().stream()
+            .filter(unit -> unit.getType().getName().equals("bomber"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(bomber.getAlreadyMoved()).isEqualByComparingTo("3");
+    assertThat(bomber.getBonusMovement()).isEqualTo(1);
+    assertThat(infantry.getTransportedBy()).isSameAs(bomber);
+    assertThat(territory.getUnits()).contains(allied).doesNotContain(transport);
+    data.getProperties().set(Constants.MOD_ECR_RULES, false);
+    final var legacy = data.getUnitTypeList().getUnitTypeOrThrow("transport_plane").create(germans);
+    territory.getUnitCollection().add(legacy);
+    ModEcrAircraftRules.revertAircraft(MockDelegateBridge.newDelegateBridge(germans), germans);
+    assertThat(territory.getUnits()).contains(legacy);
+  }
 }

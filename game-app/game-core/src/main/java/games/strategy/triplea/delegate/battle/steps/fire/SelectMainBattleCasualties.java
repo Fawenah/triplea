@@ -41,8 +41,42 @@ public class SelectMainBattleCasualties
   public CasualtyDetails apply(final IDelegateBridge bridge, final SelectCasualties step) {
 
     final TargetUnits targetUnits = getTargetUnits(step);
-    final int totalHitPointsAvailable = getMaxHits(targetUnits.combatUnits);
     final int hitCount = step.getFireRoundState().getDice().getHits();
+    if (!EditDelegate.getEditMode(step.getBattleState().getGameData().getProperties())
+        && games.strategy.triplea.delegate.battle.ModEcrCombatRules.isAntiTankFiringGroup(
+            step.getBattleState(), step.getFiringGroup())) {
+      final var priority =
+          targetUnits.combatUnits.stream()
+              .filter(games.strategy.triplea.delegate.battle.ModEcrCombatRules::isAntiTankTarget)
+              .toList();
+      if (!priority.isEmpty() && hitCount > 0) {
+        final int priorityHits = Math.min(hitCount, getMaxHits(priority));
+        final var chosen =
+            selectOrdinaryCasualties(
+                bridge, step, TargetUnits.of(new ArrayList<>(priority), List.of()), priorityHits);
+        if (priorityHits == hitCount) {
+          return chosen;
+        }
+        targetUnits.combatUnits.removeAll(chosen.getKilled());
+        final var overflow =
+            selectOrdinaryCasualties(bridge, step, targetUnits, hitCount - priorityHits);
+        final List<Unit> killed = new ArrayList<>(chosen.getKilled());
+        killed.addAll(overflow.getKilled());
+        final List<Unit> damaged = new ArrayList<>(chosen.getDamaged());
+        damaged.addAll(overflow.getDamaged());
+        return new CasualtyDetails(
+            killed, damaged, chosen.getAutoCalculated() && overflow.getAutoCalculated());
+      }
+    }
+    return selectOrdinaryCasualties(bridge, step, targetUnits, hitCount);
+  }
+
+  private CasualtyDetails selectOrdinaryCasualties(
+      final IDelegateBridge bridge,
+      final SelectCasualties step,
+      final TargetUnits targetUnits,
+      final int hitCount) {
+    final int totalHitPointsAvailable = getMaxHits(targetUnits.combatUnits);
     final int hitsLeftForRestrictedTransports = hitCount - totalHitPointsAvailable;
 
     final CasualtyDetails casualtyDetails;
@@ -53,9 +87,7 @@ public class SelectMainBattleCasualties
 
     } else if (totalHitPointsAvailable > hitCount) {
       // not all units were hit so the player needs to pick which ones are killed
-      casualtyDetails =
-          selectFunction.apply(
-              bridge, step, targetUnits.combatUnits, step.getFireRoundState().getDice().getHits());
+      casualtyDetails = selectFunction.apply(bridge, step, targetUnits.combatUnits, hitCount);
 
     } else if (totalHitPointsAvailable == hitCount || targetUnits.restrictedTransports.isEmpty()) {
       // all of the combat units were hit so kill them without asking the player

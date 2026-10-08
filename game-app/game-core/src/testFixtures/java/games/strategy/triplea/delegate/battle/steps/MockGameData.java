@@ -9,6 +9,7 @@ import static games.strategy.triplea.Constants.DEFENDING_SUICIDE_AND_MUNITION_UN
 import static games.strategy.triplea.Constants.EDIT_MODE;
 import static games.strategy.triplea.Constants.LHTR_HEAVY_BOMBERS;
 import static games.strategy.triplea.Constants.LOW_LUCK;
+import static games.strategy.triplea.Constants.MOD_ECR_RULES;
 import static games.strategy.triplea.Constants.NAVAL_BOMBARD_CASUALTIES_RETURN_FIRE;
 import static games.strategy.triplea.Constants.PARTIAL_AMPHIBIOUS_RETREAT;
 import static games.strategy.triplea.Constants.SUBMARINES_DEFENDING_MAY_SUBMERGE_OR_RETREAT;
@@ -52,6 +53,7 @@ public class MockGameData {
   private final TechnologyFrontier technologyFrontier = mock(TechnologyFrontier.class);
 
   private MockGameData() {
+    lenient().when(gameProperties.get(MOD_ECR_RULES, false)).thenReturn(false);
     lenient().when(gameData.getProperties()).thenReturn(gameProperties);
     lenient().when(gameData.getRelationshipTracker()).thenReturn(relationshipTracker);
     lenient().when(gameData.getMap()).thenReturn(gameMap);

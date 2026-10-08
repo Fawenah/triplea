@@ -1426,6 +1426,7 @@ Round 10,000 reached in a battle. Something must be wrong. Please report this to
   }
 
   private void attackerWins(final IDelegateBridge bridge) {
+    destroyWithdrawnDefendingBombers(bridge);
     endBattle(bridge);
     whoWon = WhoWon.ATTACKER;
     bridge.getDisplayChannelBroadcaster().battleEnd(battleId, attacker.getName() + " win");
@@ -1460,6 +1461,24 @@ Round 10,000 reached in a battle. Something must be wrong. Please report this to
             battleResultDescription,
             new BattleResults(this, gameData));
     SoundUtils.playAttackerWinsAirOrSea(attacker, attackingUnits, battleSite.isWater(), bridge);
+  }
+
+  private void destroyWithdrawnDefendingBombers(final IDelegateBridge bridge) {
+    if (!Properties.getModEcrRules(gameData.getProperties())
+        || battleSite.isWater()
+        || attackingUnits.stream().noneMatch(Matches.unitIsLand())
+        || !Matches.isTerritoryEnemyAndNotUnownedWater(attacker).test(battleSite)) {
+      return;
+    }
+    final var bombers =
+        defendingUnitsRetreated.stream().filter(ModEcrCombatRules::isStrategicBomber).toList();
+    if (!bombers.isEmpty()) {
+      bridge
+          .getHistoryWriter()
+          .addChildToEvent("Withdrawn defending bombers are destroyed on capture", bombers);
+      removeUnits(bombers, bridge, battleSite, DEFENSE);
+      defendingUnitsRetreated.removeAll(bombers);
+    }
   }
 
   /**

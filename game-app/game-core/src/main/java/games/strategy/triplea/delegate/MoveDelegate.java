@@ -218,6 +218,10 @@ public class MoveDelegate extends AbstractMoveDelegate {
     if (GameStepPropertiesHelper.isRemoveAirThatCanNotLand(data)) {
       removeAirThatCantLand();
     }
+    if (Properties.getModEcrRules(data.getProperties())
+        && GameStepPropertiesHelper.isNonCombatMove(data, false)) {
+      ModEcrAircraftRules.revertAircraft(bridge, player);
+    }
 
     // WW2V1, fires at end of non combat move.
     // Other versions fire Rockets in BattleDelegate

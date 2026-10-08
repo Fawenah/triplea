@@ -32,5 +32,9 @@ public class ClearGeneralCasualties implements BattleStep {
   public void execute(final ExecutionStack stack, final IDelegateBridge bridge) {
     battleActions.clearWaitingToDieAndDamagedChangesInto(
         bridge, BattleState.Side.OFFENSE, BattleState.Side.DEFENSE);
+    games.strategy.triplea.delegate.battle.ModEcrCombatRules.withdrawAttackingBombers(
+        battleState, bridge);
+    games.strategy.triplea.delegate.battle.ModEcrCombatRules.withdrawDefendingBombers(
+        battleState, bridge);
   }
 }
