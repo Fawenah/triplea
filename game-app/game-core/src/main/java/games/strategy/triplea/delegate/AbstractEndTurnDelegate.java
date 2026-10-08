@@ -15,6 +15,7 @@ import games.strategy.engine.data.TechnologyFrontier;
 import games.strategy.engine.data.Territory;
 import games.strategy.engine.data.Unit;
 import games.strategy.engine.data.changefactory.ChangeFactory;
+import games.strategy.engine.data.properties.GameProperties;
 import games.strategy.engine.delegate.IDelegateBridge;
 import games.strategy.engine.message.IRemote;
 import games.strategy.engine.player.Player;
@@ -22,6 +23,7 @@ import games.strategy.engine.posted.game.pbem.PbemMessagePoster;
 import games.strategy.engine.random.IRandomStats.DiceType;
 import games.strategy.triplea.Constants;
 import games.strategy.triplea.Properties;
+import games.strategy.triplea.attachments.ModEcrRulesAttachment;
 import games.strategy.triplea.attachments.PlayerAttachment;
 import games.strategy.triplea.attachments.RelationshipTypeAttachment;
 import games.strategy.triplea.attachments.TechAbilityAttachment;
@@ -556,7 +558,7 @@ public abstract class AbstractEndTurnDelegate extends BaseTripleADelegate
           for (final int d : dice) {
             // we are zero based
             final int roll = d + 1;
-            loss += (roll <= 3 ? roll : 0);
+            loss += getConvoyDieLoss(roll, data.getProperties());
           }
         }
       } else {
@@ -599,6 +601,7 @@ public abstract class AbstractEndTurnDelegate extends BaseTripleADelegate
       }
     }
     final int realTotalLoss = Math.max(0, totalDamageTracker.totalValues());
+    ModEcrRulesAttachment.recordConvoyLoss(player, totalDamageTracker, bridge);
     if (rollDiceForBlockadeDamage && (realTotalLoss > 0 || !transcripts.isEmpty())) {
       final String mainline = "Total Cost from Convoy Blockades: " + realTotalLoss;
       bridge.getHistoryWriter().startEvent(mainline);
@@ -610,6 +613,11 @@ public abstract class AbstractEndTurnDelegate extends BaseTripleADelegate
       endTurnReport.append("<br />");
     }
     return realTotalLoss;
+  }
+
+  @VisibleForTesting
+  static int getConvoyDieLoss(final int roll, final GameProperties properties) {
+    return Properties.getConvoyBlockadesCountAllDice(properties) || roll <= 3 ? roll : 0;
   }
 
   @Override

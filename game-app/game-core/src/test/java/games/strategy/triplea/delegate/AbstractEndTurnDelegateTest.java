@@ -12,11 +12,26 @@ import games.strategy.triplea.xml.TestMapGameData;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.triplea.java.collections.IntegerMap;
 
 final class AbstractEndTurnDelegateTest {
+  @Test
+  @DisplayName("ECR convoy rolls count all d6 faces while existing maps retain their formula")
+  void convoyDieValues() {
+    final var properties = new GameData().getProperties();
+    for (int roll = 1; roll <= 6; roll++) {
+      assertThat(AbstractEndTurnDelegate.getConvoyDieLoss(roll, properties))
+          .isEqualTo(roll <= 3 ? roll : 0);
+    }
+    properties.set(Constants.CONVOY_BLOCKADES_COUNT_ALL_DICE, true);
+    for (int roll = 1; roll <= 6; roll++) {
+      assertThat(AbstractEndTurnDelegate.getConvoyDieLoss(roll, properties)).isEqualTo(roll);
+    }
+  }
+
   @Nested
   final class FindEstimatedIncomeTest extends AbstractDelegateTestCase {
     @Test

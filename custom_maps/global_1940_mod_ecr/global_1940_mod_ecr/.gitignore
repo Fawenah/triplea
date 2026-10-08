@@ -1,0 +1,4 @@
+# The repository ignores media globally; this standalone map needs its assets.
+!*.png
+!*.gif
+!*.mp3

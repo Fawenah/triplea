@@ -16,11 +16,14 @@ import games.strategy.engine.data.Route;
 import games.strategy.engine.data.Territory;
 import games.strategy.engine.data.Unit;
 import games.strategy.engine.data.UnitType;
+import games.strategy.engine.data.gameparser.GameParser;
 import games.strategy.engine.delegate.IDelegateBridge;
 import games.strategy.triplea.delegate.AbstractMoveDelegate;
 import games.strategy.triplea.delegate.Matches;
 import games.strategy.triplea.ui.panel.move.MovableUnitsFilter.FilterOperationResult;
 import games.strategy.triplea.xml.TestMapGameData;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,34 @@ import org.junit.jupiter.api.Test;
 import org.triplea.java.collections.CollectionUtils;
 
 class MovableUnitsFilterTest {
+  @Test
+  @DisplayName("ECR truck selection retains three infantry when four are selected")
+  void ecrTruckSubset() {
+    final var data =
+        GameParser.parse(
+                Path.of("../../custom_maps/global_1940_mod_ecr/map/games/global_1940_mod_ecr.xml"),
+                false)
+            .orElseThrow();
+    final var player = data.getPlayerList().getPlayerId("Germans");
+    advanceToStep(newDelegateBridge(player), "germansNonCombatMove");
+    final var start = territory("Germany", data);
+    final var route =
+        new Route(
+            start, territory("Western Germany", data), territory("Greater Southern Germany", data));
+    final var units =
+        new ArrayList<Unit>(data.getUnitTypeList().getUnitTypeOrThrow("truck").create(1, player));
+    units.addAll(infantry(data).create(4, player));
+    start.getUnitCollection().addAll(units);
+    final var filter =
+        new MovableUnitsFilter(
+            data, player, route, true, AbstractMoveDelegate.MoveType.DEFAULT, List.of(), Map.of());
+    assertThat(getUnitTypes(filter.filterUnitsThatCanMove(units)))
+        .containsExactlyInAnyOrder(
+            data.getUnitTypeList().getUnitTypeOrThrow("truck"),
+            infantry(data),
+            infantry(data),
+            infantry(data));
+  }
 
   private static final String NOT_ALL_UNITS_HAVE_ENOUGH_MOVEMENT =
       "Not all units have enough movement";

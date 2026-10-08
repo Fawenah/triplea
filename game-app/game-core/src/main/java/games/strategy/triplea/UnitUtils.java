@@ -154,6 +154,14 @@ public class UnitUtils {
         >= techTracker.getMinimumTerritoryValueForProductionBonus(unit.getOwner())) {
       productionCapacity += techTracker.getProductionBonus(unit.getOwner(), unit.getType());
     }
+    if (Properties.getFactoryProductionLimitedByTerritoryValue(properties)) {
+      final int damage =
+          accountForDamage
+                  && Properties.getDamageFromBombingDoneToUnitsInsteadOfTerritories(properties)
+              ? unit.getUnitDamage()
+              : 0;
+      productionCapacity = Math.min(productionCapacity, territoryProduction - damage);
+    }
     return mathMaxZero ? Math.max(0, productionCapacity) : productionCapacity;
   }
 

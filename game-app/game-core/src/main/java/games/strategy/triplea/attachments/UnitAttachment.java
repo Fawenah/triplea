@@ -2730,7 +2730,8 @@ public class UnitAttachment extends DefaultAttachment {
 
   private static boolean playerHasMechInf(final GamePlayer player) {
     final TechAttachment ta = (TechAttachment) player.getAttachment(Constants.TECH_ATTACHMENT_NAME);
-    return ta != null && ta.getMechanizedInfantry();
+    return (ta != null && ta.getMechanizedInfantry())
+        || Properties.getLandTransportWithoutTechnology(player.getData().getProperties());
   }
 
   private static boolean playerHasParatroopers(final GamePlayer player) {

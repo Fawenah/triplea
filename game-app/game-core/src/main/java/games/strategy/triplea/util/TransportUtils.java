@@ -3,7 +3,10 @@ package games.strategy.triplea.util;
 import games.strategy.engine.data.Route;
 import games.strategy.engine.data.Territory;
 import games.strategy.engine.data.Unit;
+import games.strategy.engine.data.UnitType;
+import games.strategy.triplea.Properties;
 import games.strategy.triplea.attachments.UnitAttachment;
+import games.strategy.triplea.delegate.GameStepPropertiesHelper;
 import games.strategy.triplea.delegate.Matches;
 import games.strategy.triplea.delegate.TransportTracker;
 import java.util.ArrayList;
@@ -26,6 +29,29 @@ import org.triplea.java.collections.IntegerMap;
 /** Utilities for loading/unloading various types of transports. */
 public final class TransportUtils {
   private TransportUtils() {}
+
+  /** Applies MOD ECR cargo restrictions while retaining existing maps' transport behavior. */
+  public static boolean canCarry(final Unit transport, final Unit cargo) {
+    return canCarry(transport.getType(), cargo.getType());
+  }
+
+  private static boolean canCarry(final UnitType transport, final UnitType cargo) {
+    if (!Properties.getModEcrRules(transport.getData().getProperties())) {
+      return true;
+    }
+    return switch (transport.getName()) {
+      case "bomber", "heavy_bomber", "transport_plane", "truck" ->
+          cargo.getName().equals("infantry");
+      case "mech_infantry" ->
+          cargo.getName().equals("artillery")
+              && GameStepPropertiesHelper.isNonCombatMove(transport.getData(), false);
+      case "cargo_plane" ->
+          !cargo.getUnitAttachment().isAir()
+              && !cargo.getUnitAttachment().isSea()
+              && cargo.getUnitAttachment().getTransportCost() > 0;
+      default -> true;
+    };
+  }
 
   /** Returns a map of unit -> transport. */
   public static Map<Unit, Unit> mapTransports(
@@ -95,7 +121,8 @@ public final class TransportUtils {
       // Check if remaining units can all be loaded into 1 transport
       final int capacity = TransportTracker.getAvailableCapacity(currentTransport);
       final int remainingCost = getTransportCost(canBeTransported);
-      if (remainingCost <= capacity) {
+      if (remainingCost <= capacity
+          && canBeTransported.stream().allMatch(unit -> canCarry(currentTransport, unit))) {
         if (finalTransport.isEmpty()
             || capacity < TransportTracker.getAvailableCapacity(finalTransport.get())) {
           finalTransport = Optional.of(currentTransport);
@@ -172,6 +199,11 @@ public final class TransportUtils {
 
     final Collection<Unit> airTransports =
         CollectionUtils.getMatches(transports, Matches.unitIsAirTransport());
+    if (!airTransports.isEmpty()
+        && Properties.getModEcrRules(
+            CollectionUtils.getAny(airTransports).getOwner().getData().getProperties())) {
+      return List.copyOf(mapTransportsToLoad(units, airTransports).keySet());
+    }
     List<Unit> canBeTransported = CollectionUtils.getMatches(units, Matches.unitCanBeTransported());
     canBeTransported = sortByTransportCostDescending(canBeTransported);
 
@@ -188,7 +220,9 @@ public final class TransportUtils {
       final int transportCost = unitType.getTransportCost();
       for (final UnitCategory transportType : transportTypes) {
         final int transportCapacity = transportType.getUnitAttachment().getTransportCapacity();
-        if (transportCost > 0 && transportCapacity >= transportCost) {
+        if (transportCost > 0
+            && transportCapacity >= transportCost
+            && canCarry(transportType.getType(), unitType.getType())) {
           final int transportCount =
               CollectionUtils.countMatches(
                   airTransports, Matches.unitIsOfType(transportType.getType()));
@@ -243,7 +277,7 @@ public final class TransportUtils {
     for (final Unit transport : canTransport) {
       final int capacity =
           TransportTracker.getAvailableCapacity(transport) - addedLoad.getInt(transport);
-      if (capacity >= cost) {
+      if (capacity >= cost && canCarry(transport, unit)) {
         addedLoad.add(transport, cost);
         mapping.put(unit, transport);
         return Optional.of(transport);
@@ -258,7 +292,7 @@ public final class TransportUtils {
     for (final Iterator<Unit> it = canBeTransported.iterator(); it.hasNext(); ) {
       final Unit unit = it.next();
       final int cost = unit.getUnitAttachment().getTransportCost();
-      if (capacity >= cost) {
+      if (capacity >= cost && canCarry(transport, unit)) {
         capacity -= cost;
         mapping.put(unit, transport);
         it.remove();

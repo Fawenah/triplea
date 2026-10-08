@@ -1,0 +1,5 @@
+map_name: global_1940_mod_ecr
+version: 1
+games:
+  - game_name: Global 1940 MOD ECR v3.0
+    file_name: global_1940_mod_ecr.xml

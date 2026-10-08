@@ -1,0 +1,67 @@
+<html><body>
+<h1>Global 1940 MOD ECR v3.0 — first implementation</h1>
+<p>Based on Young Grasshoppers Tournament Edition 1.0.4. Original map and
+engine credits belong to their respective creators, including Young Grasshopper
+and Veqryn. This is a separate local variant.</p>
+<h2>Dice and units</h2>
+<p>Combat uses d10: hit on the printed value or less. AAA and facility fire hit
+on 1, cruiser defensive AA has up to 2 shots, and kamikaze hits on 3.
+Bombing damage and convoy disruption remain d6. Strategic bombing adds 2.
+Every convoy die counts, with losses capped by the affected territories.</p>
+<p>Infantry 3 IPC / A2 D2 M1; artillery 4 / A3 D3 M1; mechanized infantry
+4 / A2 D2 M2; tank 6 / A5 D5 M2; anti-tank gun 4 / A2 D3 M1;
+mechanized anti-tank gun 5 / A3 D5 M2; AAA 3 / no combat / M1;
+truck 2 / no combat / M2.</p>
+<p>Fighter 10 / A4 D5 M4; tactical bomber 10 / A5 D3 M4;
+strategic bomber 10 / A7 D1 M6; reconnaissance 5 / no combat / M6.
+Reconnaissance has no special ability and there is no Fog of War.</p>
+<p>Submarine 6 / A4 D2; destroyer 8 / A4 D4; cruiser 12 / A5 D6;
+carrier 16 / A1 D3; battleship 20 / A7 D7; transport 7 / no combat.
+All ships move 2, with operative base bonuses retained.</p>
+<h2>Combined arms</h2>
+<p>Each defending tank or artillery boosts up to 2 infantry from D2 to D3;
+each infantry receives this bonus only once. Artillery boosts 1 attacking mech
+infantry to A3. Mechanized infantry requires tank pairing to blitz. Infantry
+attack and tactical bomber attack do not receive the old combined-arms bonuses.
+One fresh artillery can accompany one mechanized infantry for up to two spaces
+in noncombat when both begin and finish together.</p>
+<h2>Aircraft transport and upgrades</h2>
+<p>Transport aircraft are free reclassifications of strategic or heavy bombers;
+cargo aircraft require heavy bombers. They cannot be bought directly. Until
+conversion enforcement is added, use Edit mode to remove the original bomber
+and add exactly one corresponding aircraft owned by the same power, in the
+same territory. Both forms have M6 and no combat value. Transport aircraft
+carry up to 2 infantry; cargo aircraft carry 1 transportable ground unit.
+Both forms airlift in noncombat only. Aircraft cargo types and capacity are
+checked by the engine.</p>
+<p>Upgraded unit types exist for manual replacement after an agreed technology
+discovery: self propelled artillery, heavy tank, jet fighter, heavy bomber,
+super submarine, super carrier, super battleship, improved transport, and radar
+units/facilities. Upgrades cannot be bought directly. Research phases are
+disabled pending the final implementation stage; agree research using d6 and
+apply upgrades manually. UK Europe and UK Pacific do not share discoveries.</p>
+<h2>Map, economy, and victory</h2>
+<p>The YG initial forces, diplomacy, neutral armies, modified turn order, and
+unplaced-purchase retention are preserved. Siberia is 2 IPC, Soviet Far East 0,
+Argentina is pro-Axis, South Africa has a victory city, and Algeria connects
+directly to French West Africa. India upgrades after war is declared at a
+politics checkpoint. Lend-lease is placed after UK Europe mobilization while
+the USA is neutral.</p>
+<p>National objectives follow the supplied VictoryObjectives reference. Victory
+tokens persist once earned. Occupation requires Poland, Finland, Bulgaria,
+and Iraq, excluding Argentina. The winner is decided after 8 rounds; ties go
+to the Allies. The London convoy alternative uses actual capped losses from
+original UK Europe territories in the same turn. Tokens are shown in the
+Objectives tab.</p>
+<h2>Rules still requiring manual handling</h2>
+<p>Anti-tank casualty priority; tactical bomber category selection; general
+fighter interception shots; first-round-only strategic bombers and their rolls
+against undefended transports; detailed paratrooper support/casualty restrictions;
+railroad movement; territory stacking;
+capital-ship bounties; sea mines; naval screening/blockades; ELO and faction bid
+separation; research progression. Mines cost 2 IPC and are removed on a hit.
+Factories/bases do not count toward stacking. Capital-ship bounties are paid
+at end turn. Existing YG behavior applies until the relevant rule is automated.</p>
+<p>See the bundled README and RULE_STATUS.md for exact automated and deferred
+behavior, validation results, and first-pass assumptions.</p>
+</body></html>

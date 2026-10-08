@@ -9,6 +9,7 @@ import games.strategy.engine.data.GameData;
 import games.strategy.engine.data.IAttachment;
 import games.strategy.engine.delegate.IDelegate;
 import games.strategy.triplea.attachments.CanalAttachment;
+import games.strategy.triplea.attachments.ModEcrRulesAttachment;
 import games.strategy.triplea.attachments.PlayerAttachment;
 import games.strategy.triplea.attachments.PoliticalActionAttachment;
 import games.strategy.triplea.attachments.RelationshipTypeAttachment;
@@ -125,6 +126,7 @@ public final class XmlGameElementMapper {
         .put("PoliticalActionAttachment", PoliticalActionAttachment::new)
         .put("RelationshipTypeAttachment", RelationshipTypeAttachment::new)
         .put("RulesAttachment", RulesAttachment::new)
+        .put("ModEcrRulesAttachment", ModEcrRulesAttachment::new)
         .put("TechAbilityAttachment", TechAbilityAttachment::new)
         .put("TechAttachment", TechAttachment::new)
         .put("TerritoryAttachment", TerritoryAttachment::new)

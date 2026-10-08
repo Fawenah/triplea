@@ -6,6 +6,7 @@ import games.strategy.engine.data.GamePlayer;
 import games.strategy.engine.data.GameState;
 import games.strategy.engine.data.Territory;
 import games.strategy.engine.data.Unit;
+import games.strategy.triplea.Properties;
 import games.strategy.triplea.ai.AiUtils;
 import games.strategy.triplea.ai.pro.ProData;
 import games.strategy.triplea.ai.pro.data.ProBattleResult;
@@ -16,6 +17,7 @@ import games.strategy.triplea.attachments.UnitAttachment;
 import games.strategy.triplea.attachments.UnitSupportAttachment;
 import games.strategy.triplea.delegate.Matches;
 import games.strategy.triplea.delegate.move.validation.AirMovementValidator;
+import games.strategy.triplea.util.TransportUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -218,7 +220,8 @@ public final class ProTransportUtils {
     }
     final GamePlayer player = unit.getOwner();
     if (!Matches.unitIsLandTransport().test(unit)
-        || !player.getTechAttachment().getMechanizedInfantry()) {
+        || !(player.getTechAttachment().getMechanizedInfantry()
+            || Properties.getLandTransportWithoutTechnology(player.getData().getProperties()))) {
       // This unit can't transport anything else.
       return List.of(unit);
     }
@@ -226,6 +229,11 @@ public final class ProTransportUtils {
         t.getMatches(
             Matches.unitIsOwnedBy(player)
                 .and(Matches.unitIsLandTransportable())
+                .and(cargo -> TransportUtils.canCarry(unit, cargo))
+                .and(
+                    cargo ->
+                        !Properties.getModEcrRules(player.getData().getProperties())
+                            || !cargo.hasMoved())
                 .and(ProMatches.unitHasLessMovementThan(unit)));
     units.removeAll(usedUnits);
     if (units.isEmpty()) {

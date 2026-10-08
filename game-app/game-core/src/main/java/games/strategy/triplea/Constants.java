@@ -169,6 +169,11 @@ public interface Constants {
       "Paratroopers Can Attack Deep Into Enemy Territory";
   String USE_BOMBING_MAX_DICE_SIDES_AND_BONUS = "Use Bombing Max Dice Sides And Bonus";
   String CONVOY_BLOCKADES_ROLL_DICE_FOR_COST = "Convoy Blockades Roll Dice For Cost";
+  String CONVOY_BLOCKADES_COUNT_ALL_DICE = "Convoy Blockades Count All Dice";
+  String FACTORY_PRODUCTION_LIMITED_BY_TERRITORY_VALUE =
+      "Factory Production Limited By Territory Value";
+  String LAND_TRANSPORT_WITHOUT_TECHNOLOGY = "Land Transport Without Technology";
+  String MOD_ECR_RULES = "MOD ECR Rules";
   String AIRBORNE_ATTACKS_ONLY_IN_EXISTING_BATTLES = "Airborne Attacks Only In Existing Battles";
   String AIRBORNE_ATTACKS_ONLY_IN_ENEMY_TERRITORIES = "Airborne Attacks Only In Enemy Territories";
   String SUBS_CAN_END_NONCOMBAT_MOVE_WITH_ENEMIES = "Subs Can End NonCombat Move With Enemies";

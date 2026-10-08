@@ -911,7 +911,8 @@ public class MoveValidator {
           } else {
             for (final Unit transport : landTransportsWithCapacity.keySet()) {
               final int cost = unit.getUnitAttachment().getTransportCost();
-              if (cost <= landTransportsWithCapacity.getInt(transport)) {
+              if (cost <= landTransportsWithCapacity.getInt(transport)
+                  && TransportUtils.canCarry(transport, unit)) {
                 landTransportsWithCapacity.add(transport, -cost);
                 unitOk = true;
                 break;
@@ -929,7 +930,8 @@ public class MoveValidator {
 
   private static int getNumLandTransportsWithoutCapacity(
       final Collection<Unit> units, final GamePlayer player) {
-    if (player.getTechAttachment().getMechanizedInfantry()) {
+    if (player.getTechAttachment().getMechanizedInfantry()
+        || Properties.getLandTransportWithoutTechnology(player.getData().getProperties())) {
       final Predicate<Unit> transportLand =
           Matches.unitIsLandTransportWithoutCapacity().and(Matches.unitIsOwnedBy(player));
       return CollectionUtils.countMatches(units, transportLand);
@@ -940,7 +942,8 @@ public class MoveValidator {
   private static IntegerMap<Unit> getLandTransportsWithCapacity(
       final Collection<Unit> units, final GamePlayer player) {
     final IntegerMap<Unit> map = new IntegerMap<>();
-    if (player.getTechAttachment().getMechanizedInfantry()) {
+    if (player.getTechAttachment().getMechanizedInfantry()
+        || Properties.getLandTransportWithoutTechnology(player.getData().getProperties())) {
       final Predicate<Unit> transportLand =
           Matches.unitIsLandTransportWithCapacity().and(Matches.unitIsOwnedBy(player));
       for (final Unit unit : CollectionUtils.getMatches(units, transportLand)) {
@@ -1481,6 +1484,10 @@ public class MoveValidator {
     for (Unit transport : airTransportDependents.keySet()) {
       int capacity = TransportTracker.getAvailableCapacity(transport);
       for (Unit beingTransported : airTransportDependents.get(transport)) {
+        if (!TransportUtils.canCarry(transport, beingTransported)) {
+          result.setError("This aircraft cannot carry that unit type");
+          return Map.of();
+        }
         int cost = beingTransported.getUnitAttachment().getTransportCost();
         // Validate capacity, as airTransportDependents is coming from the move we're validating.
         if (capacity < cost) {

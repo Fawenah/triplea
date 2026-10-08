@@ -516,6 +516,23 @@ public final class Properties implements Constants {
     return properties.get(CONVOY_BLOCKADES_ROLL_DICE_FOR_COST, false);
   }
 
+  public static boolean getConvoyBlockadesCountAllDice(final GameProperties properties) {
+    return properties.get(CONVOY_BLOCKADES_COUNT_ALL_DICE, false);
+  }
+
+  public static boolean getFactoryProductionLimitedByTerritoryValue(
+      final GameProperties properties) {
+    return properties.get(FACTORY_PRODUCTION_LIMITED_BY_TERRITORY_VALUE, false);
+  }
+
+  public static boolean getLandTransportWithoutTechnology(final GameProperties properties) {
+    return properties.get(LAND_TRANSPORT_WITHOUT_TECHNOLOGY, false);
+  }
+
+  public static boolean getModEcrRules(final GameProperties properties) {
+    return properties.get(MOD_ECR_RULES, false);
+  }
+
   public static boolean getAirborneAttacksOnlyInExistingBattles(final GameProperties properties) {
     return properties.get(AIRBORNE_ATTACKS_ONLY_IN_EXISTING_BATTLES, false);
   }
