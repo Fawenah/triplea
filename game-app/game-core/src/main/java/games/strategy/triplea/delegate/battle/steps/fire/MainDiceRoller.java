@@ -20,6 +20,16 @@ public class MainDiceRoller
     final var state = step.getBattleState();
     final var firing = step.getFiringGroup().getFiringUnits();
     final var targets = step.getFiringGroup().getTargetUnits();
+    if (games.strategy.triplea.delegate.battle.ModEcrTacticalRules.isTargeted(
+        state, step.getSide(), step.getFiringGroup())) {
+      return games.strategy.triplea.delegate.battle.ModEcrDice.roll(
+          firing,
+          state,
+          step.getSide(),
+          bridge,
+          "Targeted tactical bombing in " + state.getBattleSite().getName(),
+          u -> 4);
+    }
     if (Properties.getModEcrRules(state.getGameData().getProperties())
         && state.getBattleSite().isWater()
         && step.getSide() == games.strategy.triplea.delegate.battle.BattleState.Side.OFFENSE

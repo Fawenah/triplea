@@ -114,6 +114,8 @@ public interface BattleStep extends IExecutable {
         new OffensiveGeneral(battleState, battleActions),
         new DefensiveGeneral(battleState, battleActions),
         new ClearAaCasualties(battleState, battleActions),
+        new games.strategy.triplea.delegate.battle.steps.fire.ModEcrInterception(
+            battleState, battleActions),
         new RemoveNonCombatants(battleState, battleActions),
         new MarkNoMovementLeft(battleState, battleActions),
         new RemoveFirstStrikeSuicide(battleState, battleActions),

@@ -42,6 +42,12 @@ public class SelectMainBattleCasualties
 
     final TargetUnits targetUnits = getTargetUnits(step);
     final int hitCount = step.getFireRoundState().getDice().getHits();
+    if (games.strategy.triplea.delegate.battle.ModEcrTacticalRules.isTargeted(
+        step.getBattleState(), step.getSide(), step.getFiringGroup())) {
+      final var targets = new ArrayList<>(step.getFiringGroup().getTargetUnits());
+      return selectOrdinaryCasualties(
+          bridge, step, TargetUnits.of(targets, List.of()), Math.min(hitCount, targets.size()));
+    }
     if (!EditDelegate.getEditMode(step.getBattleState().getGameData().getProperties())
         && games.strategy.triplea.delegate.battle.ModEcrCombatRules.isAntiTankFiringGroup(
             step.getBattleState(), step.getFiringGroup())) {

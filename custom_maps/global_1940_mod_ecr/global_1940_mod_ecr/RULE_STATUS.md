@@ -39,6 +39,8 @@ rule documents are untouched. Research is the last priority.
 | London convoy token | Actual capped losses of at least 12 from originally British territories in one turn; acquired territories do not count |
 | Final score | End of round 8, count persistent tokens; Allies win ties; Attrition is the tie-break, not an extra collectible token |
 | Victory display | Permanent tokens are shown in the Objectives tab |
+| Fighter interception | Ordinary battles: after normal AAA, both sides roll simultaneously before casualties are removed; fighter 1, jet 3 on d10; survivors still fire normally; raid interception retained |
+| Tactical targeted attack | Attacker selects bombers and a unit type per bomber before any battle dice; fixed 4 through the battle, excess hits lost; escorted transports excluded, submarines require a destroyer; AI uses normal attack 5 |
 
 ## Preserved YG behavior and assumptions to review
 
@@ -68,6 +70,10 @@ rule documents are untouched. Research is the last priority.
   The printed artwork still includes YG annotations, so use the ECR roster and
   game notes for current combat values and objectives.
 
+The fighter interception and tactical attack rules above are automated. Tactical
+choices survive save/reload; mid-battle saves from older builds continue with
+normal tactical attacks. AI targeting decisions remain a later improvement.
+
 ## Manual or deferred
 
 | Rule | Current limitation / agreed target |
@@ -76,8 +82,6 @@ rule documents are untouched. Research is the last priority.
 | Research | No automatic progression or discoveries; public information is allowed, all research dice d6, UK economies do not share discoveries |
 | Upgrade acquisition | Use manual replacement variants until research is implemented; no automatic conversion of existing forces or upgrade purchase frontier |
 | Paratrooper details | Base airlift support works, but required friendly ground-unit ratios, full cargo casualty handling, and onward-flight restrictions need further work |
-| Fighter interception | Raid escorts/interceptors work; the extra shot in ordinary battles is deferred; the user requires both sides' AA shots to fire simultaneously |
-| Tactical targeted attack | Normal attack 5; per-bomber category selection at fixed 4 is deferred; submarines must still require a destroyer |
 | Stacking overflow | Resolve excess by moving units out; if removal is necessary, select and remove them in Edit mode. No automatic deletion. Germany alone starts over the limit: 17 counted units versus 15; its starting forces are preserved |
 | Capital-ship bounty | Manually pay 1 IPC at end turn to the participating player first in turn order |
 | Mines | Type and cost exist; placement and attacks are manual; one entry roll per movement phase, not per ship; remove on a successful hit; losing destroyers leaves existing mines intact but prevents new placement while over allowance |
@@ -97,7 +101,7 @@ airlift cargo, landing reservations, placement, and preserving starting excess.
 Existing movement, transport, and production regression tests also passed.
 
 The complete game-core and game-headed checks (including formatting and PMD)
-and desktop distribution build passed: 2,589 game-core tests, including 77
+and desktop distribution build passed: 2,601 game-core tests, including 89
 MOD ECR integration cases, and 78 desktop tests, with zero failures.
 AI regression coverage includes movement previews during Politics/Purchase,
 combat aircraft exemptions during Politics, and German attack/defense option
@@ -115,3 +119,8 @@ Its notes explicitly use Edit mode for naval mine placement/removal and manual
 handling; it supplies nation/colour/border markers rather than an automated ECR
 entry-roll implementation. ECR's destroyer caps, one roll per movement phase,
 and removal on successful hits take precedence. No files in that map were changed.
+
+Interception tests cover simultaneous fire, normal/jet hit boundaries, normal
+AAA removal before interception, and save/resume without rerolling. Tactical
+tests cover category selection, submarine/destroyer and transport restrictions,
+fixed accuracy, excess hits, exhausted categories, and persisted choices.

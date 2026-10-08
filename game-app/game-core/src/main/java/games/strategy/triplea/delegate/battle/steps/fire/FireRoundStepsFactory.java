@@ -40,7 +40,10 @@ public class FireRoundStepsFactory {
                         games.strategy.triplea.delegate.battle.ModEcrCombatRules
                                 .isAntiTankFiringGroup(battleState, group)
                             ? 0
-                            : 1)
+                            : games.strategy.triplea.delegate.battle.ModEcrTacticalRules.isTargeted(
+                                    battleState, side, group)
+                                ? 1
+                                : 2)
                 .thenComparing(FiringGroup::getDisplayName)
                 .thenComparing(FiringGroup::isSuicideOnHit))
         .map(

@@ -327,7 +327,17 @@ capture. Defending bombers now withdraw after round one, cannot fire or be chose
 as later combat casualties, and are destroyed when enemy ground units capture
 their territory. They survive when the territory is held or an air-only attack
 wins without capture.
-Fighter interception and tactical target selection remain the next combat work.
+Fighter interception and tactical target selection are now implemented. Normal
+AAA resolves first, then both sides roll interception before selecting/removing
+casualties; survivors retain normal fire. Tactical choices use the existing unit
+selection interface before any dice, persist in the battle save state, and split
+fixed-4 category fire from normal-5 attacks. Excess category hits are lost;
+escorted transports cannot be selected and submarine targeting requires a
+participating destroyer. AI uses the legal normal-attack option. Old mid-battle
+saves retain normal tactical attacks.
+
+Next combat work is end-of-turn capital-ship bounty attribution, followed by
+mine placement/entry rolls. Research remains last.
 
 The supplied NavalMine.png and reconnaissancePlane.png are copied unchanged to
 each owner sprite directory and preserved by map regeneration. Ownership remains
@@ -483,7 +493,7 @@ serialized fields/packages or remote API signatures were changed.
 
 Validation: `:game-core:check`, `:game-headed:check` and
 `:game-headed:installDist` passed with JDK 25.
-All 2,589 game-core tests passed, including 77 MOD ECR integration cases;
+All 2,601 game-core tests passed, including 89 MOD ECR integration cases;
 78 desktop tests passed. Formatting and
 PMD passed. The independent Python map audit passed. The supplied YG baseline
 was preserved. The user played a German turn on the first-pass version;
@@ -504,7 +514,7 @@ The first combat increment now automates anti-tank assignment, attacking bomber
 withdrawal and transport rolls, and end-of-noncombat aircraft reversion. Defender
 bomber withdrawal and destruction on ground capture are also implemented under
 the user's confirmed ruling.
-Next priorities are fighter interception, tactical targeting and the remaining
+Next priorities are capital-ship bounties, mine automation and the remaining
 combat/aircraft rules still handled manually, followed
 by capital-ship bounties, mines/naval screening and finally research. Use
 the first playtest to review the documented YG setup/diplomacy/placement choices

@@ -93,8 +93,11 @@ public class FiringGroupSplitterGeneral
       targetGroups.removeAll(airVsSubGroups);
       generateNamedGroups(groupName, firingGroups, targetGroups, canFire, enemyCombatants);
     }
-    return games.strategy.triplea.delegate.battle.ModEcrCombatRules.splitAntiTankGroups(
-        battleState, firingGroups);
+    return games.strategy.triplea.delegate.battle.ModEcrTacticalRules.splitGroups(
+        battleState,
+        side,
+        games.strategy.triplea.delegate.battle.ModEcrCombatRules.splitAntiTankGroups(
+            battleState, firingGroups));
   }
 
   private Collection<Unit> getCombatParticipants(

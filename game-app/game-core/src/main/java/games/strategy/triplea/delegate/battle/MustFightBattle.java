@@ -147,6 +147,13 @@ public class MustFightBattle extends DependentBattle
   private final List<Unit> attackingUnitsRetreated = new ArrayList<>();
   private final List<Unit> defendingUnitsRetreated = new ArrayList<>();
   // -1 would mean forever until one side is eliminated (the default is infinite)
+  private Map<Unit, UnitType> modEcrTacticalTargets;
+
+  @Override
+  public Map<Unit, UnitType> getModEcrTacticalTargets() {
+    return modEcrTacticalTargets == null ? Map.of() : modEcrTacticalTargets;
+  }
+
   private final int maxRounds;
 
   public MustFightBattle(
@@ -656,6 +663,9 @@ public class MustFightBattle extends DependentBattle
     if (CollectionUtils.getMatches(defendingUnits, Matches.unitIsNotInfrastructure()).isEmpty()) {
       endBattle(WhoWon.ATTACKER, bridge);
       return;
+    }
+    if (modEcrTacticalTargets == null) {
+      modEcrTacticalTargets = ModEcrTacticalRules.chooseTargets(this, bridge);
     }
     determineStepStrings();
     final IDisplay display = bridge.getDisplayChannelBroadcaster();

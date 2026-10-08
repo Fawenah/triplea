@@ -80,6 +80,10 @@ public interface BattleState {
     }
   }
 
+  default java.util.Map<Unit, games.strategy.engine.data.UnitType> getModEcrTacticalTargets() {
+    return java.util.Map.of();
+  }
+
   BattleStatus getStatus();
 
   Territory getBattleSite();

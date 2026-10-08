@@ -276,7 +276,8 @@ class ModEcrSpecialCombatTest
     assertThat(battle.getWhoWon().name()).isEqualTo(winner);
     assertThat(site.getUnits().contains(bomber)).isEqualTo(survives);
     assertThat(battle.getRemainingDefendingUnits().contains(bomber)).isEqualTo(survives);
-    MockDelegateBridge.thenGetRandomShouldHaveBeenCalled(bridge, org.mockito.Mockito.times(2));
+    MockDelegateBridge.thenGetRandomShouldHaveBeenCalled(
+        bridge, org.mockito.Mockito.times(attackingType.equals("fighter") ? 3 : 2));
   }
 
   @Test
@@ -310,6 +311,249 @@ class ModEcrSpecialCombatTest
     assertThat(battle.getBattleRound()).isEqualTo(2);
     assertThat(site.getUnits()).contains(attacker).doesNotContain(defender, bomber);
     assertThat(index.get()).isEqualTo(4);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"fighter,0,0", "fighter,1,4", "jet_fighter,2,0"})
+  void simultaneousInterception(
+      final String fighterType, final int roll, final int expectedNormalRolls) {
+    final var site = data.getMap().getTerritoryOrNull("France");
+    site.getUnitCollection().removeAll(new ArrayList<>(site.getUnits()));
+    final var attacker = unit(fighterType, germans);
+    final var defender = unit(fighterType, british);
+    site.getUnitCollection().addAll(List.of(attacker, defender));
+    final var battle =
+        new MustFightBattle(site, germans, data, data.getBattleDelegate().getBattleTracker());
+    battle.setUnits(List.of(defender), List.of(attacker), List.of(), british, List.of());
+    battle.setHeadless(true);
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    final var count = new java.util.concurrent.atomic.AtomicInteger();
+    MockDelegateBridge.whenGetRandom(bridge)
+        .thenAnswer(
+            call -> {
+              final int index = count.getAndIncrement();
+              return new int[] {index < 2 ? roll : 0};
+            });
+    battle.fight(bridge);
+    assertThat(site.getUnits()).doesNotContain(attacker, defender);
+    assertThat(count.get()).isEqualTo(expectedNormalRolls == 0 ? 2 : expectedNormalRolls);
+  }
+
+  @Test
+  void tacticalChoicesUseExistingDialog() {
+    final var bomber = unit("tactical_bomber", germans);
+    final var tank = unit("armour", british);
+    final var state = state(1, List.of(bomber), List.of(tank));
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    final var player = bridge.getRemotePlayer(germans);
+    when(player.selectUnitsQuery(any(), anyCollection(), any())).thenReturn(List.of(bomber));
+    final var choices =
+        games.strategy.triplea.delegate.battle.ModEcrTacticalRules.chooseTargets(state, bridge);
+    assertThat(choices).containsEntry(bomber, tank.getType());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"armour,false,true", "submarine,false,false", "submarine,true,true"})
+  void tacticalCategoryRestrictions(
+      final String targetType, final boolean destroyer, final boolean canFire) {
+    final var bomber = unit("tactical_bomber", germans);
+    final var target = unit(targetType, british);
+    final List<Unit> attackers = new ArrayList<>(List.of(bomber));
+    if (destroyer) {
+      attackers.add(unit("destroyer", germans));
+    }
+    final var state =
+        org.mockito.Mockito.spy(
+            FakeBattleState.givenBattleStateBuilder(germans, british)
+                .battleRound(2)
+                .battleSite(
+                    data.getMap()
+                        .getTerritoryOrNull(
+                            targetType.equals("submarine") ? "110 Sea Zone" : "France"))
+                .attackingUnits(attackers)
+                .defendingUnits(List.of(target))
+                .build());
+    org.mockito.Mockito.doReturn(java.util.Map.of(bomber, target.getType()))
+        .when(state)
+        .getModEcrTacticalTargets();
+    final var groups =
+        FiringGroupSplitterGeneral.of(
+                BattleState.Side.OFFENSE, FiringGroupSplitterGeneral.Type.NORMAL, "units")
+            .apply(state);
+    assertThat(groups.stream().filter(g -> g.getFiringUnits().contains(bomber)).count())
+        .isEqualTo(canFire ? 1 : 0);
+  }
+
+  @Test
+  void targetedBombersUseFixedFourAndLoseExcessHits() {
+    final var bombers =
+        data.getUnitTypeList().getUnitTypeOrThrow("tactical_bomber").create(2, germans);
+    final var tank = unit("armour", british);
+    final var infantry = unit("infantry", british);
+    final var state = org.mockito.Mockito.spy(state(1, bombers, List.of(tank, infantry)));
+    org.mockito.Mockito.doReturn(
+            java.util.Map.of(bombers.get(0), tank.getType(), bombers.get(1), tank.getType()))
+        .when(state)
+        .getModEcrTacticalTargets();
+    final var group =
+        FiringGroupSplitterGeneral.of(
+                BattleState.Side.OFFENSE, FiringGroupSplitterGeneral.Type.NORMAL, "units")
+            .apply(state)
+            .get(0);
+    assertThat(group.getTargetUnits()).containsExactly(tank);
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.whenGetRandom(bridge).thenReturn(new int[] {3, 4});
+    final var fire = new FireRoundState();
+    final var dice =
+        new MainDiceRoller()
+            .apply(
+                bridge,
+                new RollDiceStep(
+                    state, BattleState.Side.OFFENSE, group, fire, new MainDiceRoller()));
+    assertThat(dice.getHits()).isEqualTo(1);
+    final var casualties =
+        new SelectMainBattleCasualties().apply(bridge, selection(state, group, 2));
+    assertThat(casualties.getKilled()).containsExactly(tank).doesNotContain(infantry);
+    final var nextRound = org.mockito.Mockito.spy(state(2, bombers, List.of(infantry)));
+    org.mockito.Mockito.doReturn(state.getModEcrTacticalTargets())
+        .when(nextRound)
+        .getModEcrTacticalTargets();
+    assertThat(
+            FiringGroupSplitterGeneral.of(
+                    BattleState.Side.OFFENSE, FiringGroupSplitterGeneral.Type.NORMAL, "units")
+                .apply(nextRound))
+        .isEmpty();
+  }
+
+  @Test
+  void transportTargetCannotBeSelectedWhileEscorted() {
+    final var bomber = unit("tactical_bomber", germans);
+    final var transport = unit("transport", british);
+    final var destroyer = unit("destroyer", british);
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    final var player = bridge.getRemotePlayer(germans);
+    final List<String> prompts = new ArrayList<>();
+    when(player.selectUnitsQuery(any(), anyCollection(), any()))
+        .thenAnswer(
+            call -> {
+              prompts.add(call.getArgument(2));
+              return List.of(bomber);
+            });
+    final var choices =
+        games.strategy.triplea.delegate.battle.ModEcrTacticalRules.chooseTargets(
+            state(1, List.of(bomber), List.of(transport, destroyer)), bridge);
+    assertThat(choices).containsEntry(bomber, destroyer.getType());
+    assertThat(prompts).noneMatch(prompt -> prompt.contains("targeting transport"));
+  }
+
+  @Test
+  void normalAaRemovesFightersBeforeInterception() {
+    final var site = data.getMap().getTerritoryOrNull("France");
+    site.getUnitCollection().removeAll(new ArrayList<>(site.getUnits()));
+    final var fighter = unit("fighter", germans);
+    final var infantry = unit("infantry", germans);
+    final var aa = unit("aaGun", british);
+    final var defender = unit("fighter", british);
+    site.getUnitCollection().addAll(List.of(fighter, infantry, aa, defender));
+    final var battle =
+        new MustFightBattle(site, germans, data, data.getBattleDelegate().getBattleTracker());
+    battle.setUnits(
+        List.of(aa, defender), List.of(fighter, infantry), List.of(), british, List.of());
+    battle.setHeadless(true);
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    final List<String> annotations = new ArrayList<>();
+    MockDelegateBridge.whenGetRandom(bridge)
+        .thenAnswer(
+            call -> {
+              annotations.add(call.getArgument(4));
+              final int[] rolls = new int[(int) call.getArgument(1)];
+              java.util.Arrays.fill(
+                  rolls, annotations.size() > 1 && call.getArgument(2).equals(germans) ? 9 : 0);
+              return rolls;
+            });
+    battle.fight(bridge);
+    assertThat(site.getUnits()).doesNotContain(fighter);
+    assertThat(annotations).noneMatch(a -> a.startsWith("Fighter interception"));
+  }
+
+  @Test
+  void interruptedInterceptionResumesWithoutRerolling() throws Exception {
+    final var site = data.getMap().getTerritoryOrNull("France");
+    site.getUnitCollection().removeAll(new ArrayList<>(site.getUnits()));
+    final var attacker = unit("fighter", germans);
+    final var defender = unit("fighter", british);
+    site.getUnitCollection().addAll(List.of(attacker, defender));
+    final var battle =
+        new MustFightBattle(site, germans, data, data.getBattleDelegate().getBattleTracker());
+    battle.setUnits(List.of(defender), List.of(attacker), List.of(), british, List.of());
+    battle.setHeadless(true);
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.whenGetRandom(bridge)
+        .thenReturn(new int[] {0})
+        .thenThrow(new IllegalStateException("pause"));
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> battle.fight(bridge))
+        .hasMessage("pause");
+    final var bytes = new java.io.ByteArrayOutputStream();
+    try (final var out = new java.io.ObjectOutputStream(bytes)) {
+      out.writeObject(data);
+      out.writeObject(battle);
+    }
+    final MustFightBattle restored;
+    try (final var in =
+        new java.io.ObjectInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray()))) {
+      ((GameData) in.readObject()).postDeSerialize();
+      restored = (MustFightBattle) in.readObject();
+    }
+    restored.getGameData().postDeSerialize();
+    final var resumed =
+        MockDelegateBridge.newDelegateBridge(restored.getPlayer(BattleState.Side.OFFENSE));
+    MockDelegateBridge.whenGetRandom(resumed).thenReturn(new int[] {0});
+    restored.fight(resumed);
+    assertThat(restored.getRemainingAttackingUnits()).isEmpty();
+    assertThat(restored.getRemainingDefendingUnits()).isEmpty();
+    MockDelegateBridge.thenGetRandomShouldHaveBeenCalled(resumed, org.mockito.Mockito.times(1));
+  }
+
+  @Test
+  void tacticalCategoriesSurviveSerialization() throws Exception {
+    final var site = data.getMap().getTerritoryOrNull("France");
+    final var bomber = unit("tactical_bomber", germans);
+    final var target = unit("armour", british);
+    final var battle =
+        new MustFightBattle(site, germans, data, data.getBattleDelegate().getBattleTracker());
+    battle.setUnits(List.of(target), List.of(bomber), List.of(), british, List.of());
+    final var field = MustFightBattle.class.getDeclaredField("modEcrTacticalTargets");
+    field.setAccessible(true);
+    field.set(battle, java.util.Map.of(bomber, target.getType()));
+    final var bytes = new java.io.ByteArrayOutputStream();
+    try (final var out = new java.io.ObjectOutputStream(bytes)) {
+      out.writeObject(data);
+      out.writeObject(battle);
+    }
+    try (final var in =
+        new java.io.ObjectInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray()))) {
+      ((GameData) in.readObject()).postDeSerialize();
+      final var restored = (MustFightBattle) in.readObject();
+      final var restoredBomber =
+          restored
+              .filterUnits(BattleState.UnitBattleFilter.ALIVE, BattleState.Side.OFFENSE)
+              .iterator()
+              .next();
+      assertThat(restored.getModEcrTacticalTargets())
+          .containsEntry(
+              restoredBomber,
+              restored.getGameData().getUnitTypeList().getUnitTypeOrThrow("armour"));
+      assertThat(
+              FiringGroupSplitterGeneral.of(
+                      BattleState.Side.OFFENSE, FiringGroupSplitterGeneral.Type.NORMAL, "units")
+                  .apply(restored))
+          .singleElement()
+          .satisfies(
+              group ->
+                  assertThat(group.getTargetUnits().stream().map(Unit::getType).distinct().toList())
+                      .extracting(games.strategy.engine.data.UnitType::getName)
+                      .containsExactly("armour"));
+    }
   }
 
   private SelectCasualties selection(
