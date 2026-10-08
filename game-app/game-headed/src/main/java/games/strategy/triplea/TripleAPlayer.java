@@ -345,6 +345,21 @@ public class TripleAPlayer extends AbstractBasePlayer {
     final MoveDescription moveDescription =
         ui.getMoveOffEdt(gamePlayer, getPlayerBridge(), nonCombat, stepName);
     if (moveDescription == null) {
+      if (!games.strategy.triplea.delegate.EditDelegate.getEditMode(
+          getGameData().getProperties())) {
+        final var overStacked =
+            games.strategy.triplea.delegate.ModEcrMovementRules.overStackedTerritories(
+                getGameData(), gamePlayer);
+        if (!overStacked.isEmpty()) {
+          ui.notifyErrorOffEdt(
+              "Resolve excess units by moving them out or using Edit mode before ending the phase. Land stacking limit (10 + IPC): "
+                  + overStacked.stream()
+                      .map(Territory::getName)
+                      .collect(java.util.stream.Collectors.joining(", ")));
+          move(nonCombat, stepName);
+          return;
+        }
+      }
       if (GameStepPropertiesHelper.isRemoveAirThatCanNotLand(getGameData())
           && !canAirLand(true, gamePlayer)) {
         // continue with the move loop

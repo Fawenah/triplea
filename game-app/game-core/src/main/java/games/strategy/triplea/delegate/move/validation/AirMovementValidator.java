@@ -55,7 +55,9 @@ public final class AirMovementValidator {
         || units.stream().noneMatch(Matches.unitIsAir()) // No air units, nothing to check
         || route.hasNoSteps() // if there are no steps, we didn't move, so it is always OK!
         // we can land at the end, nothing left to check
-        || Matches.airCanLandOnThisAlliedNonConqueredLandTerritory(player).test(route.getEnd())
+        || (Matches.airCanLandOnThisAlliedNonConqueredLandTerritory(player).test(route.getEnd())
+            && games.strategy.triplea.delegate.ModEcrMovementRules.fits(
+                route.getEnd(), units, player))
         // if kamikaze - we do not do any validation at all, cus they can all die and we don't care
         || Properties.getKamikazeAirplanes(data.getProperties())) {
       return result;
@@ -619,7 +621,8 @@ public final class AirMovementValidator {
 
     // Remove suicide units if combat move and any enemy units at destination
     final Collection<Unit> enemyUnitsAtEnd = route.getEnd().getMatches(Matches.enemyUnit(player));
-    if (!enemyUnitsAtEnd.isEmpty() && GameStepPropertiesHelper.isCombatMove(player.getData())) {
+    if (!enemyUnitsAtEnd.isEmpty()
+        && GameStepPropertiesHelper.isCombatMove(player.getData(), true)) {
       ownedAir.removeIf(Matches.unitIsSuicideOnAttack());
     }
 
@@ -694,8 +697,10 @@ public final class AirMovementValidator {
                     current, movementLeft, Matches.airCanFlyOver(player, areNeutralsPassableByAir)),
             Matches.airCanLandOnThisAlliedNonConqueredLandTerritory(player));
     for (final Territory landingSpot : possibleSpots) {
-      if (canAirReachThisSpot(
-          unit, data, player, current, movementLeft, landingSpot, areNeutralsPassableByAir)) {
+      if (games.strategy.triplea.delegate.ModEcrMovementRules.fits(
+              landingSpot, List.of(unit), player)
+          && canAirReachThisSpot(
+              unit, data, player, current, movementLeft, landingSpot, areNeutralsPassableByAir)) {
         return true;
       }
     }
@@ -737,7 +742,8 @@ public final class AirMovementValidator {
       return capacity >= cost;
     }
 
-    return data.getRelationshipTracker().canLandAirUnitsOnOwnedLand(player, territory.getOwner());
+    return data.getRelationshipTracker().canLandAirUnitsOnOwnedLand(player, territory.getOwner())
+        && games.strategy.triplea.delegate.ModEcrMovementRules.fits(territory, airUnits, player);
   }
 
   private static Collection<Unit> getAirThatMustLandOnCarriers(
@@ -747,8 +753,13 @@ public final class AirMovementValidator {
       final MoveValidationResult result) {
     final Collection<Unit> airThatMustLandOnCarriers = new ArrayList<>();
     final Predicate<Unit> canLandOnCarriers = Matches.unitCanLandOnCarrier();
+    final Map<Territory, Set<Unit>> reservations = new HashMap<>();
     for (final Unit unit : ownedAir) {
-      if (!canFindLand(data, unit, route)) {
+      final boolean canFindLanding =
+          Properties.getModEcrRules(data.getProperties())
+              ? reserveLandLanding(data, unit, route, ownedAir, reservations)
+              : canFindLand(data, unit, route);
+      if (!canFindLanding) {
         if (canLandOnCarriers.test(unit)) {
           airThatMustLandOnCarriers.add(unit);
         } else {
@@ -758,6 +769,48 @@ public final class AirMovementValidator {
       }
     }
     return airThatMustLandOnCarriers;
+  }
+
+  private static boolean reserveLandLanding(
+      final GameData data,
+      final Unit unit,
+      final Route route,
+      final Collection<Unit> relocatingAir,
+      final Map<Territory, Set<Unit>> reservations) {
+    final var player = unit.getOwner();
+    final var current = route.getEnd();
+    final var remaining = getMovementLeftForAirUnitNotMovedYet(unit, route);
+    if (remaining.signum() < 0) {
+      return false;
+    }
+    final boolean neutralsPassable = areNeutralsPassableByAir(data);
+    final Set<Territory> candidates = new HashSet<>();
+    candidates.add(current);
+    candidates.addAll(
+        data.getMap()
+            .getNeighborsByMovementCost(
+                current, remaining, Matches.airCanFlyOver(player, neutralsPassable)));
+    for (final var territory :
+        candidates.stream()
+            .filter(Matches.airCanLandOnThisAlliedNonConqueredLandTerritory(player))
+            .sorted(Comparator.comparing(Territory::getName))
+            .toList()) {
+      final Set<Unit> occupying = new HashSet<>(territory.getUnits());
+      occupying.removeAll(relocatingAir);
+      occupying.addAll(reservations.getOrDefault(territory, Set.of()));
+      final long count =
+          occupying.stream()
+              .filter(Matches.alliedUnit(player))
+              .filter(games.strategy.triplea.delegate.ModEcrMovementRules::countsTowardsStacking)
+              .count();
+      if (count < games.strategy.triplea.delegate.ModEcrMovementRules.stackingLimit(territory)
+          && canAirReachThisSpot(
+              unit, data, player, current, remaining, territory, neutralsPassable)) {
+        reservations.computeIfAbsent(territory, t -> new HashSet<>()).add(unit);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

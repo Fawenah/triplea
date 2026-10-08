@@ -825,6 +825,13 @@ public abstract class AbstractPlaceDelegate extends BaseTripleADelegate
    */
   public Optional<@Nls String> canUnitsBePlaced(
       final Territory to, final Collection<Unit> units, final GamePlayer player) {
+    if (!ModEcrMovementRules.fits(to, units, player)) {
+      return Optional.of(
+          "Land stacking limit in "
+              + to.getName()
+              + " is "
+              + ModEcrMovementRules.stackingLimit(to));
+    }
     final Collection<Unit> allowedUnits = getUnitsToBePlaced(to, units, player);
     if (allowedUnits == null || !allowedUnits.containsAll(units)) {
       return Optional.of(String.format("Cannot place these units in %s", to.getName()));

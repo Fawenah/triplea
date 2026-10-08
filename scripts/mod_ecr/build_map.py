@@ -14,6 +14,8 @@ from lxml import etree as ET
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "local_maps/young_grasshoppers_tournament_edition-master"
 DEST = ROOT / "custom_maps/global_1940_mod_ecr"
+if not (DEST / "unit-spec.json").exists() and (DEST / "global_1940_mod_ecr/unit-spec.json").exists():
+    DEST = DEST / "global_1940_mod_ecr"
 MAP_NAME = "global_1940_mod_ecr"
 GAME_NAME = "Global 1940 MOD ECR v3.0"
 AXIS = ["Germans", "Japanese", "Italians"]

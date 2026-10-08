@@ -38,11 +38,13 @@ class MovableUnitsFilterTest {
   @Test
   @DisplayName("ECR truck selection retains three infantry when four are selected")
   void ecrTruckSubset() {
-    final var data =
-        GameParser.parse(
-                Path.of("../../custom_maps/global_1940_mod_ecr/map/games/global_1940_mod_ecr.xml"),
-                false)
-            .orElseThrow();
+    final var mapRoot = Path.of("../../custom_maps/global_1940_mod_ecr");
+    final var relative = Path.of("map/games/global_1940_mod_ecr.xml");
+    final var path =
+        java.nio.file.Files.exists(mapRoot.resolve(relative))
+            ? mapRoot.resolve(relative)
+            : mapRoot.resolve("global_1940_mod_ecr").resolve(relative);
+    final var data = GameParser.parse(path, false).orElseThrow();
     final var player = data.getPlayerList().getPlayerId("Germans");
     advanceToStep(newDelegateBridge(player), "germansNonCombatMove");
     final var start = territory("Germany", data);

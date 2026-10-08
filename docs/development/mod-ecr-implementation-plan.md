@@ -306,7 +306,8 @@ Work in separate increments, reusing existing validation where it fits:
    across separate moves and undo.
 4. Stacking: shared territory total of 10 + IPC; exempt AAA, trucks, facilities,
    bases, and attacking aircraft. Enforce the agreed checkpoints, landing and
-   retreat limits, and postcombat removals; retain YG setup pending adjustment.
+   retreat limits; postcombat removals remain explicit Edit-mode actions. Retain
+   YG setup, including Germany's initial 17 counted units against its limit of 15.
 5. Strategic bomber paratroopers: up to 2 infantry without research, required
    supporting ground units, cargo loss to AA, no bomber combat while delivering,
    noncombat eligibility and onward flight. Remove the base tactical airlift.
@@ -394,9 +395,9 @@ Remaining review items and resolved conflicts are recorded below:
 | Unplaced purchases — resolved | Retain YG behavior |
 | Stacking facilities — resolved | Factories and bases do not count |
 | Mine persistence — resolved | Remove mines on a successful hit; retain existing behavior elsewhere where available |
-| Interception ordering | Determine AA versus fighter-shot order and simultaneous fighter shots; avoid duplicating raid interception |
+| Interception ordering | User requires both sides to fire AA simultaneously; retain separate raid interception |
 | Capital purge — resolved | Global first capture of each defeated capital |
-| Capital-ship bounty — resolved | Pay at end turn; multinational attribution follows existing behavior where available |
+| Capital-ship bounty — resolved | Pay at end turn to the participating player first in turn order |
 | Objective source conflicts — resolved | Use the explicit territory sets, rewards, and requirements from `VictoryObjectives.md` and the objective page. This resolves primary/summary differences in Japanese China/islands, Soviet reinforcement control, and other objectives; report any disagreement between the two authoritative references |
 | China purchases/Burma Road — resolved | Unlock artillery |
 | London token — first-pass treatment | Use the engine's actual capped per-territory loss allocation, count original British territory losses only, and combine enemy Axis contributions in that turn |
@@ -404,6 +405,22 @@ Remaining review items and resolved conflicts are recorded below:
 | Secret research / UK sharing — resolved | Public research is acceptable; economies do not share discoveries |
 
 ## Validation strategy
+
+Movement and placement follow-up (2026-10-08): railroad infantry bonuses and
+per-origin quotas, the improved transport three-unit ceiling, and land stacking
+checks are implemented. Germany alone starts above its limit: 17 counted units
+versus 15. Preserve those starting forces and move two counted units out during
+the first Combat Move. Excess units block movement phase completion; removals,
+when necessary, remain explicit Edit-mode actions. Factories/bases, AAA including
+radar AAA, trucks and attacking aircraft are exempt; allied units count together
+and attackers/defenders have separate limits. Sea zones are unlimited.
+
+Further user rulings: award capital-ship bounties at end turn to the participating
+player first in turn order. Free aircraft conversion happens before/during
+movement and reverses at the end of Noncombat Move. Mines attack once per entry/
+movement phase rather than per ship; existing mines persist after destroyer
+losses, while new placement is blocked when over the destroyer allowance. These
+aircraft/naval changes are recorded for subsequent implementation batches.
 
 Initial planning used local rules/guidance, relevant source, and XML inspection.
 Implementation validation now includes the real TripleA parser, initialization,
@@ -434,7 +451,9 @@ During implementation:
 ## First-pass delivery
 
 Delivered Stage 0/1, most of Stage 2, and the truck, artillery/mech pairing and
-transport/cargo aircraft portions of Stage 3. Unit upgrades have correct manual
+transport/cargo aircraft, railroad, improved transport capacity and stacking
+portions of Stage 3. Overflow removals remain explicit Edit-mode actions.
+Unit upgrades have correct manual
 variants while research acquisition remains deferred. Full rule enforcement is
 not claimed; the map's `RULE_STATUS.md` lists every manual limitation and the
 YG assumptions retained under the user's direction.
@@ -444,16 +463,26 @@ factory production and land transport without technology. MOD ECR-specific
 cargo and aggregate-objective hooks apply only to the new variant. No existing
 serialized fields/packages or remote API signatures were changed.
 
-Validation: `:game-core:check` and `:game-headed:installDist` passed with JDK 25.
-All 2,552 game-core tests passed, including 40 MOD ECR integration cases. Formatting and
+Validation: `:game-core:check`, `:game-headed:check` and
+`:game-headed:installDist` passed with JDK 25.
+All 2,571 game-core tests passed, including 59 MOD ECR integration cases;
+78 desktop tests passed. Formatting and
 PMD passed. The independent Python map audit passed. The supplied YG baseline
-was preserved. A desktop playtest has not been performed.
+was preserved. The user played a German turn on the first-pass version;
+interactive playtesting of the movement/placement follow-up remains useful.
+
+German AI startup follow-up: move validation uses its explicit combat/noncombat
+context rather than the current sequence phase. AI previews during Politics and
+Purchase no longer throw movement-phase exceptions. Regression tests cover both
+preview modes, attacking-aircraft exemptions and real German AI territory-option
+enumeration during Politics. Transport/air phase probes also tolerate previews
+outside movement phases. No serialized fields or remote signatures changed.
 
 Launch the built Windows client with `scripts/mod_ecr/run.ps1` and select the
 new map after configuring `custom_maps` as the maps folder. A copyable map ZIP
 is generated under `build/distributions/`.
 
-Next priorities are railroad/stacking enforcement and the combat rules still
-handled manually, followed by mines/naval screening and finally research. Use
+Next priorities are the combat/aircraft rules still handled manually, followed
+by capital-ship bounties, mines/naval screening and finally research. Use
 the first playtest to review the documented YG setup/diplomacy/placement choices
 and provisional unit art before adding those more invasive features.

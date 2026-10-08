@@ -3,7 +3,9 @@
 A standalone local variant of Young Grasshoppers Tournament Edition 1.0.4,
 implementing MOD ECR v3.0 and the user's clarified rules. Original map imagery
 and credits are retained. This map requires the accompanying TripleA engine
-changes for the new convoy, factory-capacity, and land-transport properties.
+changes for convoy damage, factory capacity, land/air transport, railroads and
+land stacking. Germany starts with 17 counted units against its limit of 15;
+move at least two counted units out before ending the first Combat Move.
 
 To install, copy this entire `global_1940_mod_ecr` directory into TripleA's
 configured maps folder (normally `downloadedMaps`), then select **Global 1940

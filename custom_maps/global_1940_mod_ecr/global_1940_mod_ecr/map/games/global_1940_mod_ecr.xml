@@ -9129,15 +9129,31 @@ and Iraq, excluding Argentina. The winner is decided after 8 rounds; ties go
 to the Allies. The London convoy alternative uses actual capped losses from
 original UK Europe territories in the same turn. Tokens are shown in the
 Objectives tab.</p>
+<h2>Movement and placement</h2>
+<p>Railroad movement is enforced: fresh infantry starting Noncombat Move at a
+major factory may move two spaces, up to the origin territory's IPC allowance.
+Truck transport does not spend or extend that allowance. Improved transports
+carry at most two ground units plus one infantry (three units total).</p>
+<p>Land stacking is enforced at 10 + territory IPC per side, with allied units
+counted together. AAA, radar AAA, trucks, factories/bases and attacking aircraft
+are exempt. Sea zones have no limit. Excess stacks block movement phase
+completion: move units out or resolve necessary removals in Edit mode. Germany
+starts with 17 counted units against a limit of 15; its starting forces are
+preserved, so move at least two counted units out in its first Combat Move.</p>
 <h2>Rules still requiring manual handling</h2>
 <p>Anti-tank casualty priority; tactical bomber category selection; general
 fighter interception shots; first-round-only strategic bombers and their rolls
 against undefended transports; detailed paratrooper support/casualty restrictions;
-railroad movement; territory stacking;
 capital-ship bounties; sea mines; naval screening/blockades; ELO and faction bid
 separation; research progression. Mines cost 2 IPC and are removed on a hit.
 Factories/bases do not count toward stacking. Capital-ship bounties are paid
 at end turn. Existing YG behavior applies until the relevant rule is automated.</p>
+<p>Free aircraft conversion happens before/during movement and reverses at the
+end of Noncombat Move; use Edit mode for both changes. The capital-ship bounty
+belongs to the participating player first in turn order. Mines roll once per
+entry/movement phase rather than per ship; existing mines remain after destroyer
+losses, but new placement is unavailable while over allowance. Both sides' AA
+shots in ordinary fighter interception should fire simultaneously.</p>
 <p>See the bundled README and RULE_STATUS.md for exact automated and deferred
 behavior, validation results, and first-pass assumptions.</p>
 </body></html>

@@ -24,6 +24,8 @@ import games.strategy.triplea.attachments.UnitAttachment;
 import games.strategy.triplea.delegate.AbstractMoveDelegate;
 import games.strategy.triplea.delegate.GameStepPropertiesHelper;
 import games.strategy.triplea.delegate.Matches;
+import games.strategy.triplea.delegate.ModEcrMovementRules;
+import games.strategy.triplea.delegate.ModEcrMovementRules.MovementPhase;
 import games.strategy.triplea.delegate.MoveDelegate;
 import games.strategy.triplea.delegate.TechTracker;
 import games.strategy.triplea.delegate.TerritoryEffectHelper;
@@ -111,6 +113,29 @@ public class MoveValidator {
     }
     if (validateFirst(units, route, player, result).hasError()) {
       return result;
+    }
+    if (!getEditMode(data.getProperties())) {
+      // AI planning can validate future moves while the sequence is in Politics or Purchase.
+      final var phase = isNonCombat ? MovementPhase.NONCOMBAT : MovementPhase.COMBAT;
+      final var stacking = ModEcrMovementRules.validateStacking(move, player, phase);
+      if (stacking.isPresent()) {
+        return result.setErrorReturnResult(stacking.get());
+      }
+      final var railroad = ModEcrMovementRules.validateRailroad(move, undoableMoves, phase);
+      if (railroad.isPresent()) {
+        return result.setErrorReturnResult(railroad.get());
+      }
+      for (final var transport : new HashSet<>(unitsToSeaTransports.values())) {
+        final var cargo =
+            unitsToSeaTransports.entrySet().stream()
+                .filter(e -> e.getValue().equals(transport))
+                .map(Map.Entry::getKey)
+                .toList();
+        if (!TransportUtils.canCarryManifest(transport, cargo)) {
+          return result.setErrorReturnResult(
+              "Improved transports carry at most two ground units plus one infantry");
+        }
+      }
     }
     if (isNonCombat) {
       if (validateNonCombat(units, route, player, result).hasError()) {

@@ -1,6 +1,6 @@
 # MOD ECR first-pass status
 
-Updated 2026-10-07. This is a separate variant; the supplied YG map and local
+Updated 2026-10-08. This is a separate variant; the supplied YG map and local
 rule documents are untouched. Research is the last priority.
 
 ## Automated
@@ -16,6 +16,9 @@ rule documents are untouched. Research is the last priority.
 | Cruiser AA | Two defensive precombat shots maximum, strength 1 on d10; radar cruiser strength 3 |
 | Truck transport | Three fresh infantry together with a truck can move up to two land spaces in noncombat; movement is consumed and undo restores it |
 | Artillery/mech pairing | One fresh artillery accompanies one mechanized infantry up to two spaces in noncombat, with a common origin and destination; trucks cannot transport artillery |
+| Railroads | Fresh infantry starting Noncombat Move at an allied major factory receive two-space movement; each origin's allowance is its IPC value; split moves and undo retain the origin quota; truck and air/sea passengers do not spend railroad allowances |
+| Improved transports | At most three ground units, at most two non-infantry, within the existing weighted capacity; already loaded/unloaded cargo counts |
+| Land stacking | 10 + territory IPC per side, allied units combined; exempts AAA including radar AAA, trucks, factories/bases, and attacking aircraft; sea zones unlimited; checks movement, placement, land retreats, and aircraft landing capacity; excess stacks block phase completion |
 | Transport aircraft | Noncombat airlift of two infantry, no research needed; no direct purchase; free bomber replacement still performed manually |
 | Cargo aircraft | Noncombat airlift of one transportable ground unit; infantry-only transports reject other cargo; free heavy-bomber replacement still manual |
 | Factory production | Optional engine rule caps output at territory IPC and reduces that cap for bombing damage |
@@ -63,22 +66,20 @@ rule documents are untouched. Research is the last priority.
 
 | Rule | Current limitation / agreed target |
 | --- | --- |
-| Reclassification | Use Edit mode to remove the qualifying bomber and add one aircraft of the same owner in the same territory; free, not a new purchase |
+| Reclassification | Use Edit mode before/during movement to replace the qualifying bomber, free; transport/cargo aircraft must return to bombers at the end of Noncombat Move; automation is deferred |
 | Research | No automatic progression or discoveries; public information is allowed, all research dice d6, UK economies do not share discoveries |
 | Upgrade acquisition | Use manual replacement variants until research is implemented; no automatic conversion of existing forces or upgrade purchase frontier |
-| Improved transport | Weighted capacity 8; it can admit four infantry, so manually enforce the three-unit maximum (two ground units plus one infantry) |
 | Strategic bomber limits | Existing normal battle duration and undefended-transport handling remain; manually enforce first-round-only fighting and rolls against transports |
 | Paratrooper details | Base airlift support works, but required friendly ground-unit ratios, full cargo casualty handling, and onward-flight restrictions need further work |
-| Fighter interception | Raid escorts/interceptors work; the extra shot in ordinary battles is deferred |
+| Fighter interception | Raid escorts/interceptors work; the extra shot in ordinary battles is deferred; the user requires both sides' AA shots to fire simultaneously |
 | Anti-tank | Correct normal values; required casualty priority and mechanized first-round restriction are deferred |
 | Tactical targeted attack | Normal attack 5; per-bomber category selection at fixed 4 is deferred; submarines must still require a destroyer |
-| Railroads | Deferred; origin major factory, infantry allowance equals territory IPC, no truck combination |
-| Stacking | Deferred; target 10 + IPC with AAA, trucks, factories/bases, and attacking aircraft exempt |
-| Capital-ship bounty | Manually pay 1 IPC at the sinking power's end turn; multiplayer attribution needs work |
-| Mines | Type and cost exist; purchase/placement limits and entry/transit rolls are manual; remove a mine after a successful hit |
+| Stacking overflow | Resolve excess by moving units out; if removal is necessary, select and remove them in Edit mode. No automatic deletion. Germany alone starts over the limit: 17 counted units versus 15; its starting forces are preserved |
+| Capital-ship bounty | Manually pay 1 IPC at end turn to the participating player first in turn order |
+| Mines | Type and cost exist; placement and attacks are manual; one entry roll per movement phase, not per ship; remove on a successful hit; losing destroyers leaves existing mines intact but prevents new placement while over allowance |
 | Naval blockade screening | Deferred; ordinary YG naval movement still applies |
 | ELO/faction bids | Manual separate budgets; do not pool them to buy a unit |
-| AI | Recognizes ordinary d10 values and truck transport; custom targeting, research and the deferred rules have not been taught to AI |
+| AI | Recognizes ordinary d10 values and truck transport; combat/noncombat previews are safe during Politics/Purchase and preserve the move's actual rule context; tactical planning for stacking, rail quotas and remaining special rules still needs work |
 
 ## Validation
 
@@ -86,10 +87,16 @@ The map has been loaded and initialized by the real TripleA parser. Focused
 tests cover unit values and purchase eligibility, d10 hit boundaries, defensive
 support limits, factory capacity, truck/air cargo limits, move/undo, persistent
 awards, score comparison, original-territory convoy awards, and save/reload.
+Movement follow-up tests cover railroad quotas across split moves and save/reload,
+truck separation, improved transport manifests, per-side/allied stacking,
+airlift cargo, landing reservations, placement, and preserving starting excess.
 Existing movement, transport, and production regression tests also passed.
 
-The complete game-core checks (including formatting and PMD) and desktop
-distribution build passed: 2,552 game-core tests, including 40 MOD ECR integration
-cases, with zero failures.
+The complete game-core and game-headed checks (including formatting and PMD)
+and desktop distribution build passed: 2,571 game-core tests, including 59
+MOD ECR integration cases, and 78 desktop tests, with zero failures.
+AI regression coverage includes movement previews during Politics/Purchase,
+combat aircraft exemptions during Politics, and German attack/defense option
+enumeration during Politics.
 An interactive tabletop playtest remains useful for the deferred rules and
 provisional map artwork.

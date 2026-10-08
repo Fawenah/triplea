@@ -176,6 +176,13 @@ public class MoveDelegate extends AbstractMoveDelegate {
       if (GameStepPropertiesHelper.isResetUnitStateAtStart(data)) {
         resetUnitStateAndDelegateState();
       }
+      if (GameStepPropertiesHelper.isNonCombatMove(data, false)) {
+        final var railroad = ModEcrMovementRules.giveRailroadMovement(data, player);
+        if (!railroad.isEmpty()) {
+          bridge.getHistoryWriter().startEvent("Giving infantry railroad movement");
+          bridge.addChange(railroad);
+        }
+      }
       needToInitialize = false;
     }
   }
@@ -202,6 +209,10 @@ public class MoveDelegate extends AbstractMoveDelegate {
 
   @Override
   public void end() {
+    if (!EditDelegate.getEditMode(getData().getProperties())
+        && !ModEcrMovementRules.overStackedTerritories(getData(), player).isEmpty()) {
+      throw new IllegalStateException("Resolve land stacking excess before ending movement");
+    }
     super.end();
     final GameData data = getData();
     if (GameStepPropertiesHelper.isRemoveAirThatCanNotLand(data)) {

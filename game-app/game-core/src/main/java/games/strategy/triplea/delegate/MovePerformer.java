@@ -304,6 +304,23 @@ public class MovePerformer implements Serializable {
             // mark movement
             final Change moveChange = markMovementChange(arrived, route, gamePlayer);
             change.add(moveChange);
+            for (final var passenger :
+                ModEcrMovementRules.truckPassengers(new MoveDescription(units, route))) {
+              change.add(
+                  ChangeFactory.unitPropertyChange(passenger, 0, Unit.PropertyName.BONUS_MOVEMENT));
+            }
+            if (Properties.getModEcrRules(data.getProperties())) {
+              final Set<Unit> passengers = new HashSet<>(transporting.keySet());
+              airTransportDependents.values().forEach(passengers::addAll);
+              for (final var passenger : passengers) {
+                if (passenger.getType().getName().equals("infantry")
+                    && passenger.getBonusMovement() == 1) {
+                  change.add(
+                      ChangeFactory.unitPropertyChange(
+                          passenger, 0, Unit.PropertyName.BONUS_MOVEMENT));
+                }
+              }
+            }
             // actually move the units
             final Change remove = ChangeFactory.removeUnits(route.getStart(), units);
             final Change add = ChangeFactory.addUnits(route.getEnd(), arrived);

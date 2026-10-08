@@ -868,6 +868,12 @@ public class MustFightBattle extends DependentBattle
     if (attackingUnits.stream().anyMatch(Matches.unitIsSea())) {
       possible = CollectionUtils.getMatches(possible, Matches.territoryIsWater());
     }
+    if (!battleSite.isWater()) {
+      possible.removeIf(
+          t ->
+              !games.strategy.triplea.delegate.ModEcrMovementRules.fits(
+                  t, attackingUnits.stream().filter(Matches.unitIsNotAir()).toList(), attacker));
+    }
     return possible;
   }
 

@@ -35,6 +35,19 @@ public final class TransportUtils {
     return canCarry(transport.getType(), cargo.getType());
   }
 
+  /** Checks the complete manifest, including cargo already loaded or unloaded this turn. */
+  public static boolean canCarryManifest(final Unit transport, final Collection<Unit> additional) {
+    if (!Properties.getModEcrRules(transport.getData().getProperties())
+        || !transport.getType().getName().equals("improved_transport")) {
+      return true;
+    }
+    final Set<Unit> cargo = new HashSet<>(transport.getTransporting());
+    cargo.addAll(transport.getUnloaded());
+    cargo.addAll(additional);
+    return cargo.size() <= 3
+        && cargo.stream().filter(u -> !u.getType().getName().equals("infantry")).count() <= 2;
+  }
+
   private static boolean canCarry(final UnitType transport, final UnitType cargo) {
     if (!Properties.getModEcrRules(transport.getData().getProperties())) {
       return true;
@@ -44,7 +57,7 @@ public final class TransportUtils {
           cargo.getName().equals("infantry");
       case "mech_infantry" ->
           cargo.getName().equals("artillery")
-              && GameStepPropertiesHelper.isNonCombatMove(transport.getData(), false);
+              && GameStepPropertiesHelper.isNonCombatMove(transport.getData(), true);
       case "cargo_plane" ->
           !cargo.getUnitAttachment().isAir()
               && !cargo.getUnitAttachment().isSea()
@@ -122,6 +135,7 @@ public final class TransportUtils {
       final int capacity = TransportTracker.getAvailableCapacity(currentTransport);
       final int remainingCost = getTransportCost(canBeTransported);
       if (remainingCost <= capacity
+          && canCarryManifest(currentTransport, canBeTransported)
           && canBeTransported.stream().allMatch(unit -> canCarry(currentTransport, unit))) {
         if (finalTransport.isEmpty()
             || capacity < TransportTracker.getAvailableCapacity(finalTransport.get())) {
@@ -277,7 +291,13 @@ public final class TransportUtils {
     for (final Unit transport : canTransport) {
       final int capacity =
           TransportTracker.getAvailableCapacity(transport) - addedLoad.getInt(transport);
-      if (capacity >= cost && canCarry(transport, unit)) {
+      final List<Unit> manifest =
+          mapping.entrySet().stream()
+              .filter(e -> e.getValue().equals(transport))
+              .map(Entry::getKey)
+              .collect(Collectors.toCollection(ArrayList::new));
+      manifest.add(unit);
+      if (capacity >= cost && canCarry(transport, unit) && canCarryManifest(transport, manifest)) {
         addedLoad.add(transport, cost);
         mapping.put(unit, transport);
         return Optional.of(transport);
@@ -292,7 +312,13 @@ public final class TransportUtils {
     for (final Iterator<Unit> it = canBeTransported.iterator(); it.hasNext(); ) {
       final Unit unit = it.next();
       final int cost = unit.getUnitAttachment().getTransportCost();
-      if (capacity >= cost && canCarry(transport, unit)) {
+      final List<Unit> manifest =
+          mapping.entrySet().stream()
+              .filter(e -> e.getValue().equals(transport))
+              .map(Entry::getKey)
+              .collect(Collectors.toCollection(ArrayList::new));
+      manifest.add(unit);
+      if (capacity >= cost && canCarry(transport, unit) && canCarryManifest(transport, manifest)) {
         capacity -= cost;
         mapping.put(unit, transport);
         it.remove();

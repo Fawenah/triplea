@@ -6,6 +6,8 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 MAP = ROOT / "custom_maps/global_1940_mod_ecr"
+if not (MAP / "unit-spec.json").exists() and (MAP / "global_1940_mod_ecr/unit-spec.json").exists():
+    MAP = MAP / "global_1940_mod_ecr"
 
 
 def main():

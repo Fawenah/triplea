@@ -210,6 +210,11 @@ public class TransportTracker {
 
   /** Given a unit, computes the transport capacity value available for that unit. */
   public static int getAvailableCapacity(final Unit unit) {
+    if (Properties.getModEcrRules(unit.getData().getProperties())
+        && unit.getType().getName().equals("improved_transport")
+        && unit.getTransporting().size() + unit.getUnloaded().size() >= 3) {
+      return 0;
+    }
     final UnitAttachment ua = unit.getUnitAttachment();
     // Check if there are transports available, also check for destroyer capacity (Tokyo Express)
     if (ua.getTransportCapacity() == -1

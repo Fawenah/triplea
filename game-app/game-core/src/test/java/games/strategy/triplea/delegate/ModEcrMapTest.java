@@ -50,11 +50,17 @@ class ModEcrMapTest {
   @BeforeEach
   void loadMap() {
     data =
-        GameParser.parse(
-                Path.of("../../custom_maps/global_1940_mod_ecr/map/games/global_1940_mod_ecr.xml"),
-                false)
+        GameParser.parse(mapPath(), false)
             .orElseThrow(() -> new AssertionError("The MOD ECR map must load in the engine"));
     germans = data.getPlayerList().getPlayerId("Germans");
+  }
+
+  private static Path mapPath() {
+    final var root = Path.of("../../custom_maps/global_1940_mod_ecr");
+    final var relative = Path.of("map/games/global_1940_mod_ecr.xml");
+    return java.nio.file.Files.exists(root.resolve(relative))
+        ? root.resolve(relative)
+        : root.resolve("global_1940_mod_ecr").resolve(relative);
   }
 
   @Test
@@ -240,6 +246,7 @@ class ModEcrMapTest {
   @Test
   @DisplayName("A mixed airlift assigns a tank to cargo and two infantry to a transport aircraft")
   void mixedAirlift() {
+    emptyTerritory("Greater Southern Germany");
     MockDelegateBridge.advanceToStep(
         MockDelegateBridge.newDelegateBridge(germans), "germansNonCombatMove");
     final var start = data.getMap().getTerritoryOrNull("Germany");
@@ -576,5 +583,471 @@ class ModEcrMapTest {
 
   private UnitAttachment attachment(final String unit) {
     return data.getUnitTypeList().getUnitTypeOrThrow(unit).getUnitAttachment();
+  }
+
+  @Test
+  @DisplayName("Only Germany starts above its land stacking limit; facilities and AAA are exempt")
+  void startingStackingAudit() {
+    assertThat(ModEcrMovementRules.overStackedTerritories(data, germans))
+        .extracting(Territory::getName)
+        .containsExactly("Germany");
+    final var germany = data.getMap().getTerritoryOrNull("Germany");
+    assertThat(
+            germany.getUnits().stream().filter(ModEcrMovementRules::countsTowardsStacking).count())
+        .isEqualTo(17);
+    assertThat(ModEcrMovementRules.stackingLimit(germany)).isEqualTo(15);
+    for (final var type :
+        List.of(
+            "aaGun",
+            "radar_aa",
+            "truck",
+            "factory_major",
+            "factory_minor",
+            "airfield",
+            "harbour")) {
+      assertThat(
+              ModEcrMovementRules.countsTowardsStacking(
+                  data.getUnitTypeList().getUnitTypeOrThrow(type).create(germans)))
+          .isFalse();
+    }
+  }
+
+  @Test
+  @DisplayName("Railroads honor the origin quota across moves and restore it on undo")
+  void railroadQuotaAndUndo() {
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(6, germans);
+    start.getUnitCollection().addAll(infantry);
+    final var delegate = startNoncombat();
+    final var route = new Route(start, data.getMap().getTerritoryOrNull("Western Germany"), end);
+    assertThat(delegate.move(infantry.subList(0, 5), route)).isEmpty();
+    assertThat(delegate.move(List.of(infantry.get(5)), route))
+        .get()
+        .asString()
+        .contains("Railroad allowance");
+    assertThat(delegate.undoMove(0)).isNull();
+    assertThat(delegate.move(List.of(infantry.get(5)), route)).isEmpty();
+    assertThat(infantry.get(5).getMovementLeft()).isEqualByComparingTo(BigDecimal.ZERO);
+  }
+
+  @Test
+  @DisplayName("Splitting a rail move into two steps still uses the original factory's allowance")
+  void splitRailroadMove() throws Exception {
+    final var start = emptyTerritory("Germany");
+    final var middle = emptyTerritory("Western Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    TerritoryAttachment.get(start)
+        .orElseThrow()
+        .getPropertyOrEmpty("production")
+        .orElseThrow()
+        .setValue("1");
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    middle
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(2, germans);
+    start.getUnitCollection().addAll(infantry);
+    final var delegate = startNoncombat();
+    assertThat(delegate.move(infantry, new Route(start, middle))).isEmpty();
+    assertThat(delegate.move(List.of(infantry.get(0)), new Route(middle, end))).isEmpty();
+    assertThat(delegate.move(List.of(infantry.get(1)), new Route(middle, end)))
+        .get()
+        .asString()
+        .contains("Railroad allowance in Germany is 1");
+  }
+
+  @Test
+  @DisplayName("Truck passengers do not spend the railroad quota or gain onward movement")
+  void truckAndRailroadAreSeparate() {
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(9, germans);
+    final var truck = data.getUnitTypeList().getUnitTypeOrThrow("truck").create(germans);
+    start.getUnitCollection().addAll(infantry);
+    start.getUnitCollection().add(truck);
+    final var delegate = startNoncombat();
+    final var route = new Route(start, data.getMap().getTerritoryOrNull("Western Germany"), end);
+    final List<Unit> passengers = new ArrayList<>(infantry.subList(0, 3));
+    passengers.add(truck);
+    assertThat(delegate.move(passengers, route)).isEmpty();
+    assertThat(infantry.subList(0, 3))
+        .allSatisfy(u -> assertThat(u.getMovementLeft()).isLessThanOrEqualTo(BigDecimal.ZERO));
+    assertThat(delegate.move(infantry.subList(3, 8), route)).isEmpty();
+    assertThat(delegate.move(List.of(infantry.get(8)), route))
+        .get()
+        .asString()
+        .contains("Railroad allowance");
+  }
+
+  @Test
+  @DisplayName("Minor factories and factories added after phase start do not grant rail movement")
+  void railroadEligibility() {
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_minor").create(germans));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(germans);
+    start.getUnitCollection().add(infantry);
+    final var delegate = startNoncombat();
+    final var route = new Route(start, data.getMap().getTerritoryOrNull("Western Germany"), end);
+    assertThat(delegate.move(List.of(infantry), route)).isPresent();
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    assertThat(delegate.move(List.of(infantry), route)).isPresent();
+  }
+
+  @Test
+  @DisplayName("Improved transport mapping enforces three units, including cargo already aboard")
+  void improvedTransportManifest() {
+    final var transport =
+        data.getUnitTypeList().getUnitTypeOrThrow("improved_transport").create(germans);
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(4, germans);
+    final var location = emptyTerritory("113 Sea Zone");
+    location.getUnitCollection().add(transport);
+    location.getUnitCollection().addAll(infantry);
+    assertThat(
+            games.strategy.triplea.util.TransportUtils.mapTransportsToLoad(
+                infantry, List.of(transport)))
+        .hasSize(3);
+    assertThat(
+            games.strategy.triplea.util.TransportUtils.mapTransportsToLoadUsingMinTransports(
+                infantry, List.of(transport)))
+        .hasSize(3);
+    assertThat(games.strategy.triplea.util.TransportUtils.canCarryManifest(transport, infantry))
+        .isFalse();
+    infantry.get(0).setTransportedBy(transport);
+    assertThat(
+            games.strategy.triplea.util.TransportUtils.canCarryManifest(
+                transport, infantry.subList(1, 4)))
+        .isFalse();
+    assertThat(
+            games.strategy.triplea.util.TransportUtils.mapTransportsToLoad(
+                infantry.subList(1, 4), List.of(transport)))
+        .hasSize(2);
+    final var cargo =
+        List.of(
+            infantry.get(1), data.getUnitTypeList().getUnitTypeOrThrow("armour").create(germans));
+    assertThat(games.strategy.triplea.util.TransportUtils.canCarryManifest(transport, cargo))
+        .isTrue();
+    data.getProperties().set(Constants.MOD_ECR_RULES, false);
+    assertThat(games.strategy.triplea.util.TransportUtils.canCarryManifest(transport, infantry))
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName("Allied stacks count together, while enemy stacks and sea zones are separate")
+  void alliedStacking() {
+    final var territory = emptyTerritory("Greater Southern Germany");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    territory
+        .getUnitCollection()
+        .addAll(
+            infantry.create(
+                ModEcrMovementRules.stackingLimit(territory),
+                data.getPlayerList().getPlayerId("Italians")));
+    assertThat(ModEcrMovementRules.fits(territory, List.of(infantry.create(germans)), germans))
+        .isFalse();
+    assertThat(
+            ModEcrMovementRules.fits(
+                territory,
+                infantry.create(100, data.getPlayerList().getPlayerId("Russians")),
+                germans))
+        .isTrue();
+    assertThat(
+            ModEcrMovementRules.fits(
+                data.getMap().getTerritoryOrNull("113 Sea Zone"),
+                infantry.create(100, germans),
+                germans))
+        .isTrue();
+    data.getProperties().set(Constants.MOD_ECR_RULES, false);
+    assertThat(ModEcrMovementRules.fits(territory, infantry.create(100, germans), germans))
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName("Land placement rejects an excess infantry but permits exempt facilities")
+  void stackingPlacement() {
+    final var territory = emptyTerritory("Germany");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    territory.getUnitCollection().addAll(infantry.create(15, germans));
+    final var delegate = new PlaceDelegate();
+    delegate.setDelegateBridgeAndPlayer(MockDelegateBridge.newDelegateBridge(germans));
+    assertThat(delegate.canUnitsBePlaced(territory, List.of(infantry.create(germans)), germans))
+        .get()
+        .asString()
+        .contains("Land stacking limit");
+    assertThat(
+            ModEcrMovementRules.fits(
+                territory,
+                List.of(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans)),
+                germans))
+        .isTrue();
+  }
+
+  private Territory emptyTerritory(final String name) {
+    final var territory = data.getMap().getTerritoryOrNull(name);
+    territory.getUnitCollection().removeAll(new ArrayList<>(territory.getUnits()));
+    return territory;
+  }
+
+  @Test
+  @DisplayName("Attacker and defender stacks are separate and only attacking aircraft are exempt")
+  void attackingAircraftExemption() {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, "germansCombatMove");
+    final var end = emptyTerritory("France");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    final var limit = ModEcrMovementRules.stackingLimit(end);
+    end.getUnitCollection()
+        .addAll(infantry.create(limit, data.getPlayerList().getPlayerId("French")));
+    final List<Unit> incoming = new ArrayList<>(infantry.create(limit, germans));
+    incoming.addAll(data.getUnitTypeList().getUnitTypeOrThrow("fighter").create(10, germans));
+    final var route = new Route(data.getMap().getTerritoryOrNull("Holland Belgium"), end);
+    assertThat(ModEcrMovementRules.validateStacking(new MoveDescription(incoming, route), germans))
+        .isEmpty();
+    incoming.add(infantry.create(germans));
+    assertThat(ModEcrMovementRules.validateStacking(new MoveDescription(incoming, route), germans))
+        .isPresent();
+    incoming.remove(incoming.size() - 1);
+    MockDelegateBridge.advanceToStep(bridge, "germansNonCombatMove");
+    assertThat(ModEcrMovementRules.validateStacking(new MoveDescription(incoming, route), germans))
+        .isPresent();
+  }
+
+  @Test
+  @DisplayName("An airlift cannot hide its cargo from the destination's stacking limit")
+  void airliftStacking() {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, "germansNonCombatMove");
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    end.getUnitCollection()
+        .addAll(infantry.create(ModEcrMovementRules.stackingLimit(end) - 1, germans));
+    final var plane = data.getUnitTypeList().getUnitTypeOrThrow("transport_plane").create(germans);
+    final var cargo = infantry.create(2, germans);
+    final List<Unit> units = new ArrayList<>(cargo);
+    units.add(plane);
+    start.getUnitCollection().addAll(units);
+    final var route = new Route(start, data.getMap().getTerritoryOrNull("Western Germany"), end);
+    final var move = new MoveDescription(units, route, Map.of(), Map.of(plane, cargo));
+    assertThat(new MoveValidator(data, true).validateMove(move, germans).getError())
+        .contains("Land stacking limit");
+  }
+
+  @Test
+  @DisplayName("A full land territory cannot serve as an aircraft landing space")
+  void landingStacking() {
+    final var land = emptyTerritory("Western Germany");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    land.getUnitCollection()
+        .addAll(infantry.create(ModEcrMovementRules.stackingLimit(land), germans));
+    final var planes = data.getUnitTypeList().getUnitTypeOrThrow("bomber").create(2, germans);
+    assertThat(
+            games.strategy.triplea.delegate.move.validation.AirMovementValidator.canLand(
+                planes, land, germans, data))
+        .isFalse();
+    land.getUnitCollection().remove(land.getUnits().iterator().next());
+    assertThat(
+            games.strategy.triplea.delegate.move.validation.AirMovementValidator.canLand(
+                planes, land, germans, data))
+        .isFalse();
+    assertThat(
+            games.strategy.triplea.delegate.move.validation.AirMovementValidator.canLand(
+                List.of(planes.get(0)), land, germans, data))
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName("Phase completion never deletes an over-limit starting stack")
+  void phaseEndPreservesExcess() {
+    final var delegate = startNoncombat();
+    final var before = new ArrayList<>(data.getMap().getTerritoryOrNull("Germany").getUnits());
+    org.assertj.core.api.Assertions.assertThatIllegalStateException()
+        .isThrownBy(delegate::end)
+        .withMessageContaining("Resolve land stacking excess");
+    assertThat(data.getMap().getTerritoryOrNull("Germany").getUnits())
+        .containsExactlyInAnyOrderElementsOf(before);
+  }
+
+  @Test
+  @DisplayName("The railroad quota and two-space unit state survive a mid-phase save/reload")
+  void railroadSaveReload() throws Exception {
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Greater Southern Germany");
+    start
+        .getUnitCollection()
+        .add(data.getUnitTypeList().getUnitTypeOrThrow("factory_major").create(germans));
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(6, germans);
+    start.getUnitCollection().addAll(infantry);
+    final var delegate = startNoncombat();
+    final var route = new Route(start, data.getMap().getTerritoryOrNull("Western Germany"), end);
+    assertThat(delegate.move(List.copyOf(infantry.subList(0, 5)), route)).isEmpty();
+    final GameData copy;
+    try (var ignored = data.acquireWriteLock()) {
+      copy =
+          GameDataUtils.cloneGameData(
+                  data, GameDataManager.Options.builder().withDelegates(true).build())
+              .orElseThrow();
+    }
+    final var copiedPlayer = copy.getPlayerList().getPlayerId("Germans");
+    final var copiedDelegate = (MoveDelegate) copy.getMoveDelegate();
+    copiedDelegate.setDelegateBridgeAndPlayer(MockDelegateBridge.newDelegateBridge(copiedPlayer));
+    copiedDelegate.start();
+    final var copiedStart = copy.getMap().getTerritoryOrNull("Germany");
+    final var remaining = copiedStart.getMatches(u -> u.getType().getName().equals("infantry"));
+    final var copiedRoute =
+        new Route(
+            copiedStart,
+            copy.getMap().getTerritoryOrNull("Western Germany"),
+            copy.getMap().getTerritoryOrNull("Greater Southern Germany"));
+    assertThat(copiedDelegate.move(remaining, copiedRoute))
+        .get()
+        .asString()
+        .contains("Railroad allowance");
+    assertThat(copiedDelegate.undoMove(0)).isNull();
+    assertThat(copiedDelegate.move(remaining, copiedRoute)).isEmpty();
+  }
+
+  private MoveDelegate startNoncombat() {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, "germansNonCombatMove");
+    final var delegate = (MoveDelegate) data.getMoveDelegate();
+    delegate.setDelegateBridgeAndPlayer(bridge);
+    delegate.start();
+    return delegate;
+  }
+
+  @Test
+  @DisplayName("Two aircraft cannot reserve the same last available land stacking space")
+  void combatLandingReservations() {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, "germansCombatMove");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    for (final var territory : data.getMap().getTerritories()) {
+      if (!territory.isWater() && territory.getOwner().isAllied(germans)) {
+        territory.getUnitCollection().removeAll(new ArrayList<>(territory.getUnits()));
+        territory
+            .getUnitCollection()
+            .addAll(infantry.create(ModEcrMovementRules.stackingLimit(territory), germans));
+      }
+    }
+    final var landing = data.getMap().getTerritoryOrNull("Holland Belgium");
+    landing.getUnitCollection().remove(landing.getUnits().iterator().next());
+    final var start = data.getMap().getTerritoryOrNull("Germany");
+    final var planes = data.getUnitTypeList().getUnitTypeOrThrow("bomber").create(2, germans);
+    start.getUnitCollection().addAll(planes);
+    final var route =
+        new Route(
+            start,
+            data.getMap().getTerritoryOrNull("Western Germany"),
+            landing,
+            data.getMap().getTerritoryOrNull("France"));
+    final var validator = new MoveValidator(data, false);
+    assertThat(
+            validator
+                .validateMove(new MoveDescription(List.of(planes.get(0)), route), germans)
+                .isMoveValid())
+        .isTrue();
+    assertThat(validator.validateMove(new MoveDescription(planes, route), germans).isMoveValid())
+        .isFalse();
+  }
+
+  @Test
+  @DisplayName("Explicit sea transport assignments cannot bypass the improved transport ceiling")
+  void transportManifestValidation() {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, "germansNonCombatMove");
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("113 Sea Zone");
+    final var transport =
+        data.getUnitTypeList().getUnitTypeOrThrow("improved_transport").create(germans);
+    end.getUnitCollection().add(transport);
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(4, germans);
+    start.getUnitCollection().addAll(infantry);
+    final Map<Unit, Unit> manifest = new HashMap<>();
+    infantry.forEach(unit -> manifest.put(unit, transport));
+    assertThat(
+            new MoveValidator(data, true)
+                .validateMove(
+                    new MoveDescription(infantry, new Route(start, end), manifest), germans)
+                .getError())
+        .contains("Improved transports");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"germansPolitics", "germansPurchase"})
+  @DisplayName("AI previews can validate combat and noncombat moves outside movement phases")
+  void aiMovementPreview(final String step) {
+    final var bridge = MockDelegateBridge.newDelegateBridge(germans);
+    MockDelegateBridge.advanceToStep(bridge, step);
+    final var start = emptyTerritory("Germany");
+    final var end = emptyTerritory("Western Germany");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry").create(germans);
+    start.getUnitCollection().add(infantry);
+    final var move = new MoveDescription(List.of(infantry), new Route(start, end));
+    assertThat(new MoveValidator(data, false).validateMove(move, germans).isMoveValid()).isTrue();
+    assertThat(new MoveValidator(data, true).validateMove(move, germans).isMoveValid()).isTrue();
+    final var mech = data.getUnitTypeList().getUnitTypeOrThrow("mech_infantry").create(germans);
+    final var artillery = data.getUnitTypeList().getUnitTypeOrThrow("artillery").create(germans);
+    assertThat(games.strategy.triplea.util.TransportUtils.canCarry(mech, artillery)).isFalse();
+    assertThat(data.getSequence().getStep().getName()).isEqualTo(step);
+  }
+
+  @Test
+  @DisplayName("A combat preview during Politics still exempts attacking aircraft")
+  void aiCombatPreviewStacking() {
+    MockDelegateBridge.advanceToStep(
+        MockDelegateBridge.newDelegateBridge(germans), "germansPolitics");
+    final var start = emptyTerritory("Holland Belgium");
+    final var end = emptyTerritory("France");
+    final var infantry = data.getUnitTypeList().getUnitTypeOrThrow("infantry");
+    end.getUnitCollection()
+        .addAll(
+            infantry.create(
+                ModEcrMovementRules.stackingLimit(end),
+                data.getPlayerList().getPlayerId("French")));
+    final List<Unit> attacking =
+        new ArrayList<>(infantry.create(ModEcrMovementRules.stackingLimit(end), germans));
+    attacking.add(data.getUnitTypeList().getUnitTypeOrThrow("fighter").create(germans));
+    final var move = new MoveDescription(attacking, new Route(start, end));
+    assertThat(
+            ModEcrMovementRules.validateStacking(
+                move, germans, ModEcrMovementRules.MovementPhase.COMBAT))
+        .isEmpty();
+    assertThat(
+            ModEcrMovementRules.validateStacking(
+                move, germans, ModEcrMovementRules.MovementPhase.NONCOMBAT))
+        .isPresent();
+  }
+
+  @Test
+  @DisplayName("German AI can enumerate attack and defense options during Politics")
+  void germanAiPoliticsPlanning() {
+    MockDelegateBridge.advanceToStep(
+        MockDelegateBridge.newDelegateBridge(germans), "germansPolitics");
+    final var ai = mock(games.strategy.triplea.ai.pro.AbstractProAi.class);
+    when(ai.getGameData()).thenReturn(data);
+    when(ai.getGamePlayer()).thenReturn(germans);
+    final var aiData = new games.strategy.triplea.ai.pro.ProData();
+    aiData.initialize(ai);
+    final var manager =
+        new games.strategy.triplea.ai.pro.data.ProTerritoryManager(
+            mock(games.strategy.triplea.ai.pro.util.ProOddsCalculator.class), aiData);
+    manager.populateDefenseOptions(List.of());
+    manager.populatePotentialAttackOptions();
+    assertThat(manager.getDefendOptions().getTerritoryMap()).isNotEmpty();
+    assertThat(data.getSequence().getStep().getName()).isEqualTo("germansPolitics");
   }
 }
