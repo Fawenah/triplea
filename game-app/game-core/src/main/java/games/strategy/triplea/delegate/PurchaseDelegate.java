@@ -99,12 +99,14 @@ public class PurchaseDelegate extends BaseTripleADelegate
       }
       needToInitialize = false;
     }
+    ModEcrMineRules.offerPurchase(bridge, player);
   }
 
   @Override
   public void end() {
     super.end();
     pendingProductionRules = null;
+    ModEcrMineRules.finishPurchase(bridge, player);
     needToInitialize = true;
   }
 
@@ -165,6 +167,12 @@ public class PurchaseDelegate extends BaseTripleADelegate
   public @Nullable String purchase(final IntegerMap<ProductionRule> productionRules) {
     final IntegerMap<Resource> costs = getCosts(productionRules);
     final IntegerMap<NamedAttachable> results = getResults(productionRules);
+    if (Properties.getModEcrRules(getData().getProperties())
+        && results.keySet().stream()
+            .anyMatch(
+                result -> result.getName().equals("naval_mine") && results.getInt(result) > 0)) {
+      return "Naval mines are laid at destroyers during the start of Purchase, not mobilized at factories";
+    }
     if (!canAfford(costs, player)) {
       return NOT_ENOUGH_RESOURCES;
     }

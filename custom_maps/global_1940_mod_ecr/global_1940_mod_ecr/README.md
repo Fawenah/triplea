@@ -4,7 +4,7 @@ A standalone local variant of Young Grasshoppers Tournament Edition 1.0.4,
 implementing MOD ECR v3.0 and the user's clarified rules. Original map imagery
 and credits are retained. This map requires the accompanying TripleA engine
 changes for convoy damage, factory capacity, land/air transport, railroads and
-land stacking. Germany starts with 17 counted units against its limit of 15;
+land stacking, special combat, capital-ship bounties and naval mines. Germany starts with 17 counted units against its limit of 15;
 move at least two counted units out before ending the first Combat Move.
 
 To install, copy this entire `global_1940_mod_ecr` directory into TripleA's
@@ -45,3 +45,11 @@ The builder writes only this variant. Rebuilding overwrites its generated XML,
 copied assets, notifications, and objective tab; edit the builder, roster, and
 ECR companion notes as the source of those changes. Rule documents and the
 supplied baseline are local inputs excluded from Git by the user's configuration.
+
+Naval mines can now be laid at the start of Purchase. Each eligible sea zone
+prompts for a 2 IPC mine: select the displayed destroyer to lay it, or None to
+skip that zone. Mines trigger automatically on enemy ship entry/transit in
+Combat Move and Noncombat Move. Mine rolls make movement irreversible.
+Capital-ship bounties are recorded automatically and paid at the active turn's
+end, including rewards earned by defending nations. AI ships follow mine rules;
+AI mine purchases and route planning are deferred.

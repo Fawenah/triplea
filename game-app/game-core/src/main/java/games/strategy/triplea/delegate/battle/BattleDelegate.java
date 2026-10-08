@@ -1450,6 +1450,8 @@ public class BattleDelegate extends BaseTripleADelegate implements IBattleDelega
       final UnitAttachment ua = unitUnderFire.getUnitAttachment();
       final int currentHits = unitUnderFire.getHits();
       if (ua.getHitPoints() <= currentHits + hits) {
+        games.strategy.triplea.delegate.ModEcrBountyRules.record(
+            bridge, List.of(unitUnderFire), List.of(firingEnemy));
         HistoryChangeFactory.removeUnitsFromTerritory(location, List.of(unitUnderFire))
             .perform(bridge);
       } else {

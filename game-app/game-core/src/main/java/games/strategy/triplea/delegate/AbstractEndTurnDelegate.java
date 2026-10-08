@@ -228,6 +228,7 @@ public abstract class AbstractEndTurnDelegate extends BaseTripleADelegate
         bridge.addChange(upkeep);
       }
     }
+    endTurnReport.append(ModEcrBountyRules.pay(bridge));
     if (GameStepPropertiesHelper.isRepairUnits(data)) {
       MoveDelegate.repairMultipleHitPointUnits(bridge, bridge.getGamePlayer());
     }

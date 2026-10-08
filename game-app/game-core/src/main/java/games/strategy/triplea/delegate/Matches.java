@@ -259,7 +259,11 @@ public final class Matches {
   }
 
   public static Predicate<Unit> unitIsEnemyOf(final GamePlayer player) {
-    return unit -> player.isAtWar(unit.getOwner());
+    // ECR mines are movement hazards, not combatants or movement blockers.
+    return unit ->
+        player.isAtWar(unit.getOwner())
+            && (!ModEcrMineRules.isMine(unit)
+                || !Properties.getModEcrRules(player.getData().getProperties()));
   }
 
   public static Predicate<Unit> unitIsNotSea() {
@@ -1308,7 +1312,11 @@ public final class Matches {
   }
 
   public static Predicate<Unit> enemyUnit(final GamePlayer player) {
-    return unit -> player.isAtWar(unit.getOwner());
+    // ECR mines are movement hazards, not combatants or movement blockers.
+    return unit ->
+        player.isAtWar(unit.getOwner())
+            && (!ModEcrMineRules.isMine(unit)
+                || !Properties.getModEcrRules(player.getData().getProperties()));
   }
 
   public static Predicate<Unit> enemyUnitOfAnyOfThesePlayers(final Collection<GamePlayer> players) {

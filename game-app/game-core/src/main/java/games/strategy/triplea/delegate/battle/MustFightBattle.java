@@ -147,6 +147,43 @@ public class MustFightBattle extends DependentBattle
   private final List<Unit> attackingUnitsRetreated = new ArrayList<>();
   private final List<Unit> defendingUnitsRetreated = new ArrayList<>();
   // -1 would mean forever until one side is eliminated (the default is infinite)
+  private Set<GamePlayer> modEcrOffensiveBountyParticipants;
+  private Set<GamePlayer> modEcrDefensiveBountyParticipants;
+
+  private void rememberBountyParticipants() {
+    if (headless || !Properties.getModEcrRules(gameData.getProperties())) {
+      return;
+    }
+    if (modEcrOffensiveBountyParticipants == null) {
+      modEcrOffensiveBountyParticipants = bountyParticipants(OFFENSE);
+      modEcrDefensiveBountyParticipants = bountyParticipants(DEFENSE);
+    }
+  }
+
+  private Set<GamePlayer> bountyParticipants(final Side side) {
+    return filterUnits(BattleState.UnitBattleFilter.ACTIVE, side).stream()
+        .filter(
+            Matches.unitCanParticipateInCombat(
+                side == OFFENSE,
+                attacker,
+                battleSite,
+                1,
+                filterUnits(BattleState.UnitBattleFilter.ACTIVE, side.getOpposite())))
+        .filter(
+            u ->
+                side == DEFENSE
+                    || u.isOwnedBy(attacker)
+                    || Properties.getAlliedAirIndependent(gameData.getProperties()))
+        .filter(Matches.unitIsNotInfrastructure())
+        .filter(
+            u ->
+                side == OFFENSE
+                    ? u.getUnitAttachment().getAttack(u.getOwner()) > 0
+                    : u.getUnitAttachment().getDefense(u.getOwner()) > 0)
+        .map(Unit::getOwner)
+        .collect(Collectors.toSet());
+  }
+
   private Map<Unit, UnitType> modEcrTacticalTargets;
 
   @Override
@@ -580,6 +617,13 @@ public class MustFightBattle extends DependentBattle
     // Note: Ideally we wouldn't have duplicates already, but this should fix the error for now.
     // See: https://github.com/triplea-game/triplea/issues/11597
     final var uniqueKilledUnits = new LinkedHashSet<>(killedUnits);
+    rememberBountyParticipants();
+    if (!headless && modEcrOffensiveBountyParticipants != null) {
+      games.strategy.triplea.delegate.ModEcrBountyRules.record(
+          bridge,
+          uniqueKilledUnits,
+          side == OFFENSE ? modEcrDefensiveBountyParticipants : modEcrOffensiveBountyParticipants);
+    }
     final RemoveUnitsHistoryChange removeUnitsHistoryChange =
         HistoryChangeFactory.removeUnitsFromTerritory(battleSite, uniqueKilledUnits);
 
@@ -652,6 +696,7 @@ public class MustFightBattle extends DependentBattle
       stack.execute(bridge);
       return;
     }
+    rememberBountyParticipants();
     bridge.getHistoryWriter().startEvent("Battle in " + battleSite, battleSite);
     removeAirNoLongerInTerritory();
     markAttackingTransports(bridge);

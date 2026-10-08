@@ -336,8 +336,19 @@ escorted transports cannot be selected and submarine targeting requires a
 participating destroyer. AI uses the legal normal-attack option. Old mid-battle
 saves retain normal tactical attacks.
 
-Next combat work is end-of-turn capital-ship bounty attribution, followed by
-mine placement/entry rolls. Research remains last.
+Capital-ship bounties and mines are now automated. Saved game properties record
+pending rewards and credited ship IDs, with payout at the active power's end
+turn to all recipients. Combat-capable owners present at battle start qualify;
+passive transports/sea cargo do not. Kamikaze and mine sinks credit their owner.
+Purchase-start dialogs lay mines at destroyers for 2 IPC with side/zone and
+national caps. A saved movement sub-stack handles entry/transit rolls in both
+phases, one per zone/nation/phase, damage, sunk cargo and mine consumption.
+Misses persist, and losing destroyers only prevents further over-limit placement.
+Rolled movement and earlier moves cannot be undone. AI ships follow mine attack
+rules, but AI mine purchasing and route planning are still deferred.
+
+Next is a direct aircraft conversion interface and remaining paratrooper rules,
+then naval screening/blockades and AI planning. Research remains last.
 
 The supplied NavalMine.png and reconnaissancePlane.png are copied unchanged to
 each owner sprite directory and preserved by map regeneration. Ownership remains
@@ -493,7 +504,7 @@ serialized fields/packages or remote API signatures were changed.
 
 Validation: `:game-core:check`, `:game-headed:check` and
 `:game-headed:installDist` passed with JDK 25.
-All 2,601 game-core tests passed, including 89 MOD ECR integration cases;
+All 2,636 game-core tests passed, including 124 MOD ECR integration cases;
 78 desktop tests passed. Formatting and
 PMD passed. The independent Python map audit passed. The supplied YG baseline
 was preserved. The user played a German turn on the first-pass version;
@@ -514,7 +525,7 @@ The first combat increment now automates anti-tank assignment, attacking bomber
 withdrawal and transport rolls, and end-of-noncombat aircraft reversion. Defender
 bomber withdrawal and destruction on ground capture are also implemented under
 the user's confirmed ruling.
-Next priorities are capital-ship bounties, mine automation and the remaining
+Next priorities are aircraft conversion controls, paratrooper details and the remaining
 combat/aircraft rules still handled manually, followed
 by capital-ship bounties, mines/naval screening and finally research. Use
 the first playtest to review the documented YG setup/diplomacy/placement choices

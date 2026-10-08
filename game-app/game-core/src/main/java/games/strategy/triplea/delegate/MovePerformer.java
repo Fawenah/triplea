@@ -51,6 +51,7 @@ public class MovePerformer implements Serializable {
   private UndoableMove currentMove;
   private Map<Unit, Collection<Unit>> airTransportDependents;
   private Collection<Unit> arrivingUnits;
+  private ModEcrMineMove modEcrMineMove;
 
   MovePerformer() {}
 
@@ -142,6 +143,24 @@ public class MovePerformer implements Serializable {
               }
             }
             arrivingUnits = CollectionUtils.difference(units, aaCasualtiesWithDependents);
+          }
+        };
+    final IExecutable fireMines =
+        new IExecutable() {
+          private static final long serialVersionUID = 1L;
+
+          @Override
+          public void execute(final ExecutionStack stack, final IDelegateBridge bridge) {
+            if (modEcrMineMove == null) {
+              modEcrMineMove = new ModEcrMineMove(arrivingUnits, route, gamePlayer, currentMove);
+            }
+            modEcrMineMove.execute(bridge);
+            arrivingUnits = new ArrayList<>(modEcrMineMove.getSurvivors());
+            if (modEcrMineMove.isMineRolled()) {
+              for (final var previous : moveDelegate.getMovesMade()) {
+                previous.setCantUndo("Earlier movement cannot be undone after a naval mine roll");
+              }
+            }
           }
         };
     final IExecutable postAaFire =
@@ -337,6 +356,7 @@ public class MovePerformer implements Serializable {
           }
         };
     executionStack.push(postAaFire);
+    executionStack.push(fireMines);
     executionStack.push(fireAa);
     executionStack.push(preAaFire);
     executionStack.execute(bridge);

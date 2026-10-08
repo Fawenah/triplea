@@ -244,6 +244,7 @@ public class MoveDelegate extends AbstractMoveDelegate {
               data.getUnits().getUnits(), Matches.unitHasMoved().and(Matches.unitIsNotAir()));
       bridge.addChange(ChangeFactory.markNoMovementChange(alreadyMovedNonAirUnits));
     }
+    ModEcrMineRules.finishMovement(bridge, player);
     needToInitialize = true;
     needToDoRockets = true;
   }

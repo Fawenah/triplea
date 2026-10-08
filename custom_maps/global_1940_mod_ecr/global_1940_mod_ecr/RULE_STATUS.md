@@ -10,7 +10,7 @@ rule documents are untouched. Research is the last priority.
 | d10 combat | Ten sides, exact printed attack/defense values, AA 1, kamikaze 3 |
 | d6 exceptions | Strategic bombing d6 +2, tactical bombing d6, convoy d6; research phases disabled until their d6 procedure is implemented |
 | Complete roster | 40 base, upgraded, radar, transport/cargo, and mine types; normal costs and movement in `unit-spec.json` |
-| Purchase restrictions | New ordinary units are purchasable by normal industrial powers; China retains its restricted frontier; conversion/upgrade types and mines are not freely purchasable |
+| Purchase restrictions | New ordinary units are purchasable by normal industrial powers; China retains its restricted frontier; conversion/upgrade types are not freely purchasable; mines are laid at destroyers during Purchase |
 | Basic combined arms | Artillery/tanks boost up to two defending infantry each, nonstacking; artillery supports one attacking mech infantry; old infantry/tactical attack pairing bonuses removed |
 | Mechanized blitz | Tank pairing retained, including the manual heavy-tank variant |
 | Cruiser AA | Two defensive precombat shots maximum, strength 1 on d10; radar cruiser strength 3 |
@@ -41,6 +41,8 @@ rule documents are untouched. Research is the last priority.
 | Victory display | Permanent tokens are shown in the Objectives tab |
 | Fighter interception | Ordinary battles: after normal AAA, both sides roll simultaneously before casualties are removed; fighter 1, jet 3 on d10; survivors still fire normally; raid interception retained |
 | Tactical targeted attack | Attacker selects bombers and a unit type per bomber before any battle dice; fixed 4 through the battle, excess hits lost; escorted transports excluded, submarines require a destroyer; AI uses normal attack 5 |
+| Capital-ship bounty | 1 IPC per sunk battleship/carrier, including upgrade variants, paid at the active power's end turn; earliest participating combat-capable owner in turn order receives it; damage earns nothing; kamikaze/mine sinks credited to their owner; saved accounting prevents duplicates |
+| Mines | Purchase-start prompts lay mines for 2 IPC at owned destroyers; one per allied side/zone and national total capped by destroyers; CM/NCM entry and transit roll once per zone/nation/phase, d10 at 2; hit any moving ship, consume the mine, remove sunk cargo; misses persist, destroyer losses preserve mines; rolled moves cannot be undone |
 
 ## Preserved YG behavior and assumptions to review
 
@@ -74,6 +76,14 @@ The fighter interception and tactical attack rules above are automated. Tactical
 choices survive save/reload; mid-battle saves from older builds continue with
 normal tactical attacks. AI targeting decisions remain a later improvement.
 
+Mine purchases happen before the regular purchase dialog: each eligible zone
+prompts to select its destroyer (lay one mine) or None (skip). Existing saves
+need no new map production frontier. Old saves cannot reconstruct bounties for
+ships sunk before this engine update. Battle bounty attribution considers
+combat-capable participants at battle start, including participants subsequently
+lost; passive transports and sea cargo do not qualify. Mine rolls are once per
+zone per nation per movement phase, following the user's phase-limit ruling.
+
 ## Manual or deferred
 
 | Rule | Current limitation / agreed target |
@@ -83,11 +93,9 @@ normal tactical attacks. AI targeting decisions remain a later improvement.
 | Upgrade acquisition | Use manual replacement variants until research is implemented; no automatic conversion of existing forces or upgrade purchase frontier |
 | Paratrooper details | Base airlift support works, but required friendly ground-unit ratios, full cargo casualty handling, and onward-flight restrictions need further work |
 | Stacking overflow | Resolve excess by moving units out; if removal is necessary, select and remove them in Edit mode. No automatic deletion. Germany alone starts over the limit: 17 counted units versus 15; its starting forces are preserved |
-| Capital-ship bounty | Manually pay 1 IPC at end turn to the participating player first in turn order |
-| Mines | Type and cost exist; placement and attacks are manual; one entry roll per movement phase, not per ship; remove on a successful hit; losing destroyers leaves existing mines intact but prevents new placement while over allowance |
 | Naval blockade screening | Deferred; ordinary YG naval movement still applies |
 | ELO/faction bids | Manual separate budgets; do not pool them to buy a unit |
-| AI | Recognizes ordinary d10 values and truck transport; combat/noncombat previews are safe during Politics/Purchase and preserve the move's actual rule context; tactical planning for stacking, rail quotas and remaining special rules still needs work |
+| AI | Recognizes ordinary d10 values and truck transport; combat/noncombat previews are safe during Politics/Purchase and preserve the move's actual rule context; normal tactical attack and automatic mine casualty handling work; mine purchasing/route planning, stacking and rail quota planning still need work |
 
 ## Validation
 
@@ -101,7 +109,7 @@ airlift cargo, landing reservations, placement, and preserving starting excess.
 Existing movement, transport, and production regression tests also passed.
 
 The complete game-core and game-headed checks (including formatting and PMD)
-and desktop distribution build passed: 2,601 game-core tests, including 89
+and desktop distribution build passed: 2,636 game-core tests, including 124
 MOD ECR integration cases, and 78 desktop tests, with zero failures.
 AI regression coverage includes movement previews during Politics/Purchase,
 combat aircraft exemptions during Politics, and German attack/defense option
@@ -124,3 +132,10 @@ Interception tests cover simultaneous fire, normal/jet hit boundaries, normal
 AAA removal before interception, and save/resume without rerolling. Tactical
 tests cover category selection, submarine/destroyer and transport restrictions,
 fixed accuracy, excess hits, exhausted categories, and persisted choices.
+
+Naval integration coverage includes bounty unit types, first participant in turn
+order, passive transport/cargo exclusions, once-only payment, save/reload,
+end-turn payout without an active capital, kamikaze sinks, placement cost and
+allied-zone/national limits, destroyer losses, d10 mine hit boundaries, fleet and
+phase roll limits, CM/NCM transit, immediate sink/cargo removal, capital-ship
+damage and mine bounty attribution, and full-game save/resume after a roll.
